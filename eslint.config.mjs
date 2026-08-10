@@ -19,6 +19,16 @@ const config = [
       // Le moteur manipule des nombres bruts : un `any` masquerait une
       // erreur d'unité (kcal contre kg, grammes contre portions).
       '@typescript-eslint/no-explicit-any': 'error',
+      // Le préfixe `_` marque une valeur volontairement écartée, par
+      // exemple un champ retiré par déstructuration.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
 ];

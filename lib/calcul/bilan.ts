@@ -2,7 +2,7 @@ import { FENETRE_PROJECTION_JOURS, KCAL_PAR_KG } from './constantes';
 import { calculerCompletude, type Completude } from './completude';
 import { cumulerDeficit, resoudreJournees } from './deficit';
 import { depenseEstimee, depenseReelle, depenseRetenue } from './depense';
-import { calculerAge, plageDates } from './dates';
+import { calculerAge, differenceJours, plageDates } from './dates';
 import { poidsALaDate, tendancePoids } from './poids';
 import { projeterAtteinteObjectif, type Projection } from './projection';
 import type {
@@ -62,23 +62,35 @@ export interface Bilan {
  * qui sert autant à l'affichage en une requête qu'à garder trace de ce
  * qui a été montré à l'utilisateur.
  */
-export function calculerBilan(entree: {
-  date: DateIso;
+/** Dépense d'une journée, avec ce qu'il faut pour l'expliquer à l'utilisateur. */
+export interface DepenseDuJour {
+  readonly depenseRetenueKcal: number;
+  readonly depenseReelleKcal: number | null;
+  readonly fiabilite: number;
+  readonly issueDuReel: boolean;
+}
+
+/**
+ * Série des dépenses retenues, jour après jour, du début du programme à
+ * la date demandée.
+ *
+ * Séparée du reste parce qu'elle est **séquentielle** : le lissage à 5 %
+ * relie chaque jour au précédent, on ne peut pas calculer le 12 mars
+ * sans avoir calculé le 11. Tout le reste du bilan se dérive ensuite de
+ * cette série en un seul passage.
+ */
+export function serieDepenses(entree: {
+  dateFin: DateIso;
   profil: ProfilCalcul;
   programme: ProgrammeCalcul;
   apports: readonly ApportJournalier[];
   pesees: readonly PeseeLissee[];
-}): Bilan {
-  const { date, profil, programme } = entree;
-
-  const depensesParDate = new Map<DateIso, number>();
+}): Map<DateIso, DepenseDuJour> {
+  const { profil, programme } = entree;
+  const serie = new Map<DateIso, DepenseDuJour>();
   let veille: number | null = null;
-  let derniereFiabilite = 0;
-  let derniereDepenseReelle: number | null = null;
-  let dernierIssuDuReel = false;
-  let derniereRetenue = 0;
 
-  for (const jour of plageDates(programme.dateDebut, date)) {
+  for (const jour of plageDates(programme.dateDebut, entree.dateFin)) {
     const poidsKg = poidsALaDate({
       pesees: entree.pesees,
       date: jour,
@@ -106,25 +118,76 @@ export function calculerBilan(entree: {
       depenseRetenueVeilleKcal: veille,
     });
 
-    depensesParDate.set(jour, retenue.depenseRetenueKcal);
+    serie.set(jour, {
+      depenseRetenueKcal: retenue.depenseRetenueKcal,
+      depenseReelleKcal: reelle.depenseReelleKcal,
+      fiabilite: reelle.fiabilite,
+      issueDuReel: retenue.issueDuReel,
+    });
     veille = retenue.depenseRetenueKcal;
-    derniereFiabilite = reelle.fiabilite;
-    derniereDepenseReelle = reelle.depenseReelleKcal;
-    dernierIssuDuReel = retenue.issueDuReel;
-    derniereRetenue = retenue.depenseRetenueKcal;
   }
+
+  return serie;
+}
+
+/** Retenue nulle : une date hors du programme n'a pas de dépense. */
+const DEPENSE_ABSENTE: DepenseDuJour = {
+  depenseRetenueKcal: 0,
+  depenseReelleKcal: null,
+  fiabilite: 0,
+  issueDuReel: false,
+};
+
+function depenseDu(serie: Map<DateIso, DepenseDuJour>, date: DateIso): DepenseDuJour {
+  return serie.get(date) ?? DEPENSE_ABSENTE;
+}
+
+/** Sans poids cible, il n'y a rien à projeter — et rien à inventer. */
+const PROJECTION_SANS_CIBLE: Projection = {
+  affichable: false,
+  raisonMasquee: 'donnees_insuffisantes',
+  rythmeKgParSemaine: null,
+  dateOptimiste: null,
+  dateMediane: null,
+  datePrudente: null,
+};
+
+function projeter(entree: {
+  date: DateIso;
+  poidsActuelKg: number;
+  poidsCibleKg: number | null;
+  rythmeKgParSemaine: number | null;
+  joursDonnees: number;
+}): Projection {
+  if (entree.poidsCibleKg === null) return PROJECTION_SANS_CIBLE;
+
+  return projeterAtteinteObjectif({
+    dateReference: entree.date,
+    poidsActuelKg: entree.poidsActuelKg,
+    poidsCibleKg: entree.poidsCibleKg,
+    rythmeKgParSemaine: entree.rythmeKgParSemaine,
+    joursDonnees: entree.joursDonnees,
+  });
+}
+
+export function calculerBilan(entree: {
+  date: DateIso;
+  profil: ProfilCalcul;
+  programme: ProgrammeCalcul;
+  apports: readonly ApportJournalier[];
+  pesees: readonly PeseeLissee[];
+}): Bilan {
+  const { date, programme } = entree;
+
+  const depenses = serieDepenses({ ...entree, dateFin: date });
+  const duJour = depenseDu(depenses, date);
 
   const journees = resoudreJournees({
     dateDebut: programme.dateDebut,
     dateFin: date,
     apports: entree.apports,
     mode: programme.modeJoursManquants,
-    depenseRetenuePourDate: (jour) => {
-      const valeur = depensesParDate.get(jour);
-      /* c8 ignore next 2 -- la même plage vient d'être parcourue ci-dessus */
-      if (valeur === undefined) return 0;
-      return valeur;
-    },
+    depenseRetenuePourDate: (jour) => depenseDu(depenses, jour).depenseRetenueKcal,
   });
 
   const cumul = cumulerDeficit(journees);
@@ -146,24 +209,6 @@ export function calculerBilan(entree: {
     joursFenetre: FENETRE_PROJECTION_JOURS,
   });
 
-  const projection =
-    programme.poidsCibleKg === null
-      ? {
-          affichable: false,
-          raisonMasquee: 'donnees_insuffisantes' as const,
-          rythmeKgParSemaine: null,
-          dateOptimiste: null,
-          dateMediane: null,
-          datePrudente: null,
-        }
-      : projeterAtteinteObjectif({
-          dateReference: date,
-          poidsActuelKg,
-          poidsCibleKg: programme.poidsCibleKg,
-          rythmeKgParSemaine: tendance?.kgParSemaine ?? null,
-          joursDonnees: completude.joursRenseignes,
-        });
-
   return {
     date,
     deficitCumulKcal: cumul.deficitCumuleKcal,
@@ -171,14 +216,126 @@ export function calculerBilan(entree: {
     kgReels,
     ecartKg: kgReels === null ? null : cumul.kgTheoriques - kgReels,
     completude,
-    depenseReelleKcal: derniereDepenseReelle,
-    depenseRetenueKcal: derniereRetenue,
-    fiabilite: derniereFiabilite,
-    depenseIssueDuReel: dernierIssuDuReel,
+    depenseReelleKcal: duJour.depenseReelleKcal,
+    depenseRetenueKcal: duJour.depenseRetenueKcal,
+    fiabilite: duJour.fiabilite,
+    depenseIssueDuReel: duJour.issueDuReel,
     allureKgSemaine: tendance?.kgParSemaine ?? null,
-    projection,
+    projection: projeter({
+      date,
+      poidsActuelKg,
+      poidsCibleKg: programme.poidsCibleKg,
+      rythmeKgParSemaine: tendance?.kgParSemaine ?? null,
+      joursDonnees: completude.joursRenseignes,
+    }),
     journees,
   };
+}
+
+/** Instantané d'un jour, sans le détail des journées. Alimente `instantane_calcul`. */
+export type Instantane = Omit<Bilan, 'journees'>;
+
+/**
+ * Instantanés d'une plage de dates, en **un seul passage** (spec §6.8).
+ *
+ * Modifier une entrée du 3 mars invalide tous les cumuls postérieurs :
+ * il faut réécrire un instantané par jour de la date impactée à
+ * aujourd'hui. Appeler `calculerBilan` pour chacun de ces jours
+ * recalculerait le programme entier à chaque fois — quadratique, et le
+ * critère d'acceptation exige moins de 2 secondes.
+ *
+ * Ici la série de dépenses et la résolution des journées sont calculées
+ * une fois pour tout le programme, puis le cumul se déroule
+ * linéairement. Jamais tout l'historique n'est réécrit : seule la plage
+ * demandée ressort.
+ *
+ * L'opération est idempotente — rejouer le même recalcul produit les
+ * mêmes lignes.
+ */
+export function calculerInstantanes(entree: {
+  /** Première date à réécrire : celle de l'entrée modifiée. */
+  dateDebut: DateIso;
+  /** Dernière date à réécrire : aujourd'hui. */
+  dateFin: DateIso;
+  profil: ProfilCalcul;
+  programme: ProgrammeCalcul;
+  apports: readonly ApportJournalier[];
+  pesees: readonly PeseeLissee[];
+}): Instantane[] {
+  const { programme } = entree;
+
+  // Le cumul part toujours du début du programme, même si l'on ne
+  // réécrit qu'une poignée de jours : c'est un capital, pas un solde.
+  const depenses = serieDepenses({ ...entree, dateFin: entree.dateFin });
+
+  const journees = resoudreJournees({
+    dateDebut: programme.dateDebut,
+    dateFin: entree.dateFin,
+    apports: entree.apports,
+    mode: programme.modeJoursManquants,
+    depenseRetenuePourDate: (jour) => depenseDu(depenses, jour).depenseRetenueKcal,
+  });
+
+  const aDesPesees = entree.pesees.some(
+    (p) => !p.aberrante && p.moyenneMobile7jKg !== null,
+  );
+
+  const instantanes: Instantane[] = [];
+  const cumulees: JourneeCalculee[] = [];
+  // Date la plus ancienne réellement réécrite : jamais avant le début du
+  // programme, quoi que demande l'appelant.
+  const premiere =
+    differenceJours(programme.dateDebut, entree.dateDebut) > 0
+      ? entree.dateDebut
+      : programme.dateDebut;
+
+  for (const journee of journees) {
+    cumulees.push(journee);
+
+    if (differenceJours(premiere, journee.date) < 0) continue;
+
+    const date = journee.date;
+    const cumul = cumulerDeficit(cumulees);
+    const completude = calculerCompletude(cumulees);
+
+    const poidsActuelKg = poidsALaDate({
+      pesees: entree.pesees,
+      date,
+      poidsDefautKg: programme.poidsDepartKg,
+    });
+    const kgReels = aDesPesees ? programme.poidsDepartKg - poidsActuelKg : null;
+
+    const tendance = tendancePoids({
+      pesees: entree.pesees,
+      dateFin: date,
+      joursFenetre: FENETRE_PROJECTION_JOURS,
+    });
+
+    const duJour = depenseDu(depenses, date);
+
+    instantanes.push({
+      date,
+      deficitCumulKcal: cumul.deficitCumuleKcal,
+      kgTheoriques: cumul.kgTheoriques,
+      kgReels,
+      ecartKg: kgReels === null ? null : cumul.kgTheoriques - kgReels,
+      completude,
+      depenseReelleKcal: duJour.depenseReelleKcal,
+      depenseRetenueKcal: duJour.depenseRetenueKcal,
+      fiabilite: duJour.fiabilite,
+      depenseIssueDuReel: duJour.issueDuReel,
+      allureKgSemaine: tendance?.kgParSemaine ?? null,
+      projection: projeter({
+        date,
+        poidsActuelKg,
+        poidsCibleKg: programme.poidsCibleKg,
+        rythmeKgParSemaine: tendance?.kgParSemaine ?? null,
+        joursDonnees: completude.joursRenseignes,
+      }),
+    });
+  }
+
+  return instantanes;
 }
 
 /**

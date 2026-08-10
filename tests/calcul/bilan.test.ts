@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { calculerBilan, interpreterEcart, type ProgrammeCalcul } from '@/lib/calcul/bilan';
+import {
+  calculerBilan,
+  calculerInstantanes,
+  interpreterEcart,
+  serieDepenses,
+  type ProgrammeCalcul,
+} from '@/lib/calcul/bilan';
 import { ajouterJours } from '@/lib/calcul/dates';
 import type { ApportJournalier, PeseeLissee, ProfilCalcul } from '@/lib/calcul/types';
 
@@ -198,6 +204,24 @@ describe('calculerBilan — cas particuliers', () => {
     expect(bilan.kgReels).toBeNull();
   });
 
+  it('rend un bilan vide pour une date antérieure au programme', () => {
+    const bilan = calculerBilan({
+      date: '2026-02-01',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: [],
+      pesees: [],
+    });
+
+    expect(bilan.journees).toHaveLength(0);
+    expect(bilan.deficitCumulKcal).toBe(0);
+    expect(bilan.depenseRetenueKcal).toBe(0);
+    expect(bilan.depenseReelleKcal).toBeNull();
+    expect(bilan.depenseIssueDuReel).toBe(false);
+    expect(bilan.fiabilite).toBe(0);
+    expect(bilan.completude.taux).toBe(0);
+  });
+
   it('traite un programme d’un seul jour', () => {
     const bilan = calculerBilan({
       date: '2026-03-01',
@@ -231,6 +255,193 @@ describe('calculerBilan — cas particuliers', () => {
 
     // 5 kcal de métabolisme de base × 1,55 de facteur d'activité
     expect(veille - anniversaire).toBeCloseTo(5 * 1.55, 8);
+  });
+});
+
+describe('serieDepenses', () => {
+  it('produit une dépense par jour du programme', () => {
+    const serie = serieDepenses({
+      dateFin: '2026-03-05',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: apportsConstants(5, 2000),
+      pesees: [],
+    });
+
+    expect(serie.size).toBe(5);
+    expect(serie.get('2026-03-01')?.depenseRetenueKcal).toBeCloseTo(DEPENSE_ESTIMEE, 10);
+    expect(serie.get('2026-03-05')?.issueDuReel).toBe(false);
+  });
+
+  it('rend une série vide quand la date précède le début du programme', () => {
+    const serie = serieDepenses({
+      dateFin: '2026-02-01',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: [],
+      pesees: [],
+    });
+
+    expect(serie.size).toBe(0);
+  });
+});
+
+describe('calculerInstantanes — recalcul incrémental', () => {
+  const APPORTS = apportsConstants(28, 2000);
+  const PESEES = [
+    pesee('2026-03-01', 80),
+    pesee('2026-03-15', 79.5),
+    pesee('2026-03-28', 79),
+  ];
+
+  it('ne réécrit que la plage demandée, pas tout l’historique', () => {
+    const instantanes = calculerInstantanes({
+      dateDebut: '2026-03-20',
+      dateFin: '2026-03-28',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: APPORTS,
+      pesees: PESEES,
+    });
+
+    expect(instantanes).toHaveLength(9);
+    expect(instantanes[0]?.date).toBe('2026-03-20');
+    expect(instantanes[8]?.date).toBe('2026-03-28');
+  });
+
+  it('donne exactement le même résultat que calculerBilan, jour par jour', () => {
+    // L'invariant qui compte : la voie rapide du recalcul et la voie
+    // directe de l'affichage ne doivent jamais diverger, sinon
+    // l'utilisateur voit un chiffre et la base en stocke un autre.
+    const instantanes = calculerInstantanes({
+      dateDebut: '2026-03-01',
+      dateFin: '2026-03-28',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: APPORTS,
+      pesees: PESEES,
+    });
+
+    for (const instantane of instantanes) {
+      const bilan = calculerBilan({
+        date: instantane.date,
+        profil: PROFIL,
+        programme: PROGRAMME,
+        apports: APPORTS,
+        pesees: PESEES,
+      });
+
+      const { journees: _ignore, ...attendu } = bilan;
+      expect(instantane, `divergence au ${instantane.date}`).toEqual(attendu);
+    }
+  });
+
+  it('cumule depuis le début du programme même en ne réécrivant que la fin', () => {
+    // Le déficit est un capital : réécrire les neuf derniers jours ne
+    // remet pas le compteur à zéro au 20 mars.
+    const partiel = calculerInstantanes({
+      dateDebut: '2026-03-28',
+      dateFin: '2026-03-28',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: APPORTS,
+      pesees: PESEES,
+    });
+
+    const complet = calculerInstantanes({
+      dateDebut: '2026-03-01',
+      dateFin: '2026-03-28',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: APPORTS,
+      pesees: PESEES,
+    });
+
+    expect(partiel).toHaveLength(1);
+    expect(partiel[0]).toEqual(complet[27]);
+    expect(partiel[0]?.completude.joursTotal).toBe(28);
+  });
+
+  it('ne remonte jamais avant le début du programme', () => {
+    const instantanes = calculerInstantanes({
+      dateDebut: '2026-01-01',
+      dateFin: '2026-03-05',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: apportsConstants(5, 2000),
+      pesees: [],
+    });
+
+    expect(instantanes[0]?.date).toBe('2026-03-01');
+    expect(instantanes).toHaveLength(5);
+  });
+
+  it('est idempotent', () => {
+    const parametres = {
+      dateDebut: '2026-03-20',
+      dateFin: '2026-03-28',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: APPORTS,
+      pesees: PESEES,
+    };
+
+    expect(calculerInstantanes(parametres)).toEqual(calculerInstantanes(parametres));
+  });
+
+  it('fait croître le cumul de jour en jour', () => {
+    const instantanes = calculerInstantanes({
+      dateDebut: '2026-03-01',
+      dateFin: '2026-03-05',
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: apportsConstants(5, 2000),
+      pesees: [],
+    });
+
+    const cumuls = instantanes.map((i) => i.deficitCumulKcal);
+    expect(cumuls).toEqual([...cumuls].sort((a, b) => a - b));
+    expect(cumuls[4]).toBeCloseTo(5 * DEFICIT_QUOTIDIEN, 8);
+  });
+
+  it('reste rapide sur un recalcul de trois semaines dans un programme d’un an', () => {
+    // Critère d'acceptation §14 : moins de 2 secondes. Le test vise
+    // large — il attrape une régression quadratique, pas une
+    // milliseconde de trop.
+    const apportsAn = Array.from({ length: 365 }, (_, i) => ({
+      date: ajouterJours('2026-03-01', i),
+      apportKcal: 2000,
+    }));
+    const peseesAn = Array.from({ length: 52 }, (_, i) =>
+      pesee(ajouterJours('2026-03-01', i * 7), 80 - i * 0.1),
+    );
+
+    const debut = performance.now();
+    const instantanes = calculerInstantanes({
+      dateDebut: ajouterJours('2026-03-01', 343),
+      dateFin: ajouterJours('2026-03-01', 364),
+      profil: PROFIL,
+      programme: PROGRAMME,
+      apports: apportsAn,
+      pesees: peseesAn,
+    });
+    const duree = performance.now() - debut;
+
+    expect(instantanes).toHaveLength(22);
+    expect(duree).toBeLessThan(2000);
+  });
+
+  it('rend une liste vide quand la plage précède le programme', () => {
+    expect(
+      calculerInstantanes({
+        dateDebut: '2026-01-01',
+        dateFin: '2026-02-01',
+        profil: PROFIL,
+        programme: PROGRAMME,
+        apports: [],
+        pesees: [],
+      }),
+    ).toEqual([]);
   });
 });
 
