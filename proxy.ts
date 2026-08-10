@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { actualiserSession } from '@/lib/supabase/middleware';
 
-export async function middleware(requete: NextRequest) {
+export async function proxy(requete: NextRequest) {
   return actualiserSession(requete);
 }
 

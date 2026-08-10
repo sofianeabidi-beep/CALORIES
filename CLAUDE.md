@@ -146,6 +146,29 @@ refuse de démarrer. Vitest 3.2.7 n'a pas cette contrainte.
 À lever en passant la machine en Node 22 LTS — que Next 16 et l'écosystème visent de toute
 façon. Ce n'est pas urgent : rien d'autre ne dépend de cette version.
 
+### Le recalcul n'est pas transactionnel
+
+La spec §6.8 demande une transaction. `lib/actions/recalcul.ts` enchaîne plusieurs
+allers-retours PostgREST : une coupure au milieu laisse des instantanés partiellement à
+jour.
+
+Sans gravité pour les données : `journee` et `instantane_calcul` sont **dérivés**, ils se
+reconstruisent intégralement au recalcul suivant. Aucune saisie n'est perdue.
+
+Le durcissement consiste à basculer la fonction en procédure Postgres appelée par RPC.
+À faire avant toute mise en production, et pas avant d'avoir une base pour la tester.
+
+### Playwright tourne sur Chromium en 375 px, pas sur WebKit
+
+Le profil `devices['iPhone 13']` lance WebKit, dont le binaire livré ici est incompatible
+avec le pilote (`Unknown setting: PushAPIEnabled`). Ces tests vérifient le viewport, les
+cibles tactiles et l'absence de débordement horizontal — Chromium suffit. Le moteur de rendu
+comptera quand il y aura des tests visuels.
+
+Le serveur de test écoute sur le **port 3100**. En 3000, `reuseExistingServer` attrapait le
+serveur de développement d'un autre projet et les tests s'exécutaient contre la mauvaise
+application.
+
 ## Points ouverts
 
 - **Objectifs cycliques** (objectif différent le week-end, brief §4.2) : absents du schéma
@@ -164,3 +187,13 @@ façon. Ce n'est pas urgent : rien d'autre ne dépend de cette version.
 - Commits atomiques, messages en français, un commit par tâche fonctionnelle.
 - Ne pas surdimensionner : pas d'abstraction anticipée, pas d'état global tant que React
   Query et les Server Components suffisent, pas de dépendance sans justification.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -13,6 +13,12 @@
  * Seules les tables utilisées en phase 1 sont décrites. Les colonnes
  * portent le nom exact des colonnes SQL — le mapping vers le camelCase
  * du domaine se fait dans `lib/actions/`.
+ *
+ * **Alias de type, jamais `interface`.** postgrest-js contraint chaque
+ * ligne à `Record<string, unknown>`. Un alias d'objet obtient une
+ * signature d'index implicite, une `interface` non : le schéma se
+ * résoudrait alors en `never`, et toute écriture serait rejetée par le
+ * typage avec un message qui ne désigne pas la cause.
  */
 
 export type Sexe = 'h' | 'f';
@@ -28,7 +34,7 @@ export type TypeProgramme = 'deficit' | 'surplus' | 'maintien';
 export type Repas = 'petit_dejeuner' | 'dejeuner' | 'diner' | 'collation';
 export type SourceEntree = 'off' | 'ciqual' | 'utilisateur' | 'recette' | 'rapide';
 
-export interface LigneProfil {
+export type LigneProfil = {
   user_id: string;
   sexe: Sexe;
   date_naissance: string;
@@ -41,9 +47,9 @@ export interface LigneProfil {
   cgu_acceptees_le: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LigneProgramme {
+export type LigneProgramme = {
   id: string;
   user_id: string;
   libelle: string | null;
@@ -57,9 +63,9 @@ export interface LigneProgramme {
   actif: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LigneJournee {
+export type LigneJournee = {
   id: string;
   user_id: string;
   programme_id: string | null;
@@ -75,9 +81,9 @@ export interface LigneJournee {
   note: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LigneEntree {
+export type LigneEntree = {
   id: string;
   user_id: string;
   journee_id: string;
@@ -98,9 +104,9 @@ export interface LigneEntree {
   supprime_le: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LignePesee {
+export type LignePesee = {
   id: string;
   user_id: string;
   date: string;
@@ -112,9 +118,9 @@ export interface LignePesee {
   supprime_le: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LigneInstantaneCalcul {
+export type LigneInstantaneCalcul = {
   id: string;
   user_id: string;
   programme_id: string;
@@ -135,62 +141,54 @@ export interface LigneInstantaneCalcul {
   calcule_le: string;
   created_at: string;
   updated_at: string;
-}
-
-type Table<Ligne, Insertion, Modification> = {
-  Row: Ligne;
-  Insert: Insertion;
-  Update: Modification;
-  Relationships: [];
 };
 
 /** Colonnes remplies par la base : jamais envoyées par le client. */
 type Auto = 'created_at' | 'updated_at';
 
-export interface Database {
+/**
+ * Insertion : tout est optionnel sauf les colonnes réellement
+ * obligatoires, c'est-à-dire `not null` **sans valeur par défaut** dans
+ * la migration. `user_id` n'en fait jamais partie : il vaut
+ * `auth.uid()` par défaut.
+ */
+type Insertion<Ligne, Requis extends keyof Ligne> = Partial<Omit<Ligne, Auto>> &
+  Pick<Ligne, Requis>;
+
+type Table<Ligne, Requis extends keyof Ligne> = {
+  Row: Ligne;
+  Insert: Insertion<Ligne, Requis>;
+  Update: Partial<Omit<Ligne, Auto>>;
+  Relationships: [];
+};
+
+export type Database = {
   public: {
     Tables: {
-      profil: Table<
-        LigneProfil,
-        Omit<LigneProfil, Auto | 'user_id'> & { user_id?: string },
-        Partial<Omit<LigneProfil, Auto>>
-      >;
-      programme: Table<
-        LigneProgramme,
-        Omit<LigneProgramme, Auto | 'id' | 'user_id'> & { id?: string; user_id?: string },
-        Partial<Omit<LigneProgramme, Auto>>
-      >;
-      journee: Table<
-        LigneJournee,
-        Omit<LigneJournee, Auto | 'id' | 'user_id'> & { id?: string; user_id?: string },
-        Partial<Omit<LigneJournee, Auto>>
-      >;
+      profil: Table<LigneProfil, 'sexe' | 'date_naissance' | 'taille_cm'>;
+      programme: Table<LigneProgramme, 'type' | 'date_debut' | 'poids_depart_kg'>;
+      journee: Table<LigneJournee, 'date'>;
       entree: Table<
         LigneEntree,
-        Omit<LigneEntree, Auto | 'user_id' | 'saisi_le'> & {
-          user_id?: string;
-          saisi_le?: string;
-        },
-        Partial<Omit<LigneEntree, Auto>>
+        'journee_id' | 'libelle' | 'repas' | 'quantite' | 'kcal' | 'source'
       >;
-      pesee: Table<
-        LignePesee,
-        Omit<LignePesee, Auto | 'user_id'> & { user_id?: string },
-        Partial<Omit<LignePesee, Auto>>
-      >;
+      pesee: Table<LignePesee, 'date' | 'poids_kg'>;
       instantane_calcul: Table<
         LigneInstantaneCalcul,
-        Omit<LigneInstantaneCalcul, Auto | 'id' | 'user_id' | 'calcule_le'> & {
-          id?: string;
-          user_id?: string;
-          calcule_le?: string;
-        },
-        Partial<Omit<LigneInstantaneCalcul, Auto>>
+        | 'programme_id'
+        | 'date'
+        | 'deficit_cumul_kcal'
+        | 'kg_theoriques'
+        | 'depense_retenue_kcal'
       >;
     };
-    Views: Record<never, never>;
-    Functions: Record<never, never>;
-    Enums: Record<never, never>;
-    CompositeTypes: Record<never, never>;
+    // `Record<string, never>` et non `Record<never, never>` : postgrest-js
+    // contraint ces clés à `Record<string, …>`, et un objet vide sans
+    // signature d'index fait échouer la contrainte — les tables se
+    // résolvent alors en `never` et toute écriture est rejetée.
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
-}
+};
