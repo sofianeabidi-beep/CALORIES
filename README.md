@@ -123,8 +123,22 @@ rendue telle quelle.
 À rejouer après toute migration, en collant le contenu du fichier dans le SQL Editor du
 dashboard.
 
-Restent à faire avant la phase 2 : parcours Playwright authentifié, et l'inscription à
-tester avec un domaine de courriel accepté par Supabase.
+### Parcours authentifié
+
+`tests/e2e/journee.spec.ts` suit une journée de bout en bout : connexion, vérification de la
+dépense de Mifflin-St Jeor, saisie d'un repas, répercussion exacte sur le restant, et
+présence de la complétude à côté du cumul.
+
+Il a besoin d'un compte de test — voir `supabase/tests/compte-essai.sql`, à exécuter après
+avoir changé le mot de passe qu'il contient. Sans les variables ci-dessous le parcours est
+ignoré, pour que `npm run e2e` reste vert sur une machine sans compte de test.
+
+```bash
+CALORYES_E2E_EMAIL=essai@caloryes.invalid CALORYES_E2E_MOTDEPASSE=… npm run e2e
+```
+
+Reste à faire avant la phase 2 : tester l'inscription avec un domaine de courriel accepté
+par Supabase.
 
 Voir `CLAUDE.md` pour les décisions prises et les points ouverts.
 

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  calculerBilan,
   calculerInstantanes,
   lisserPesees,
   type ApportJournalier,
@@ -130,32 +131,6 @@ export async function recalculerDepuis(entree: {
     lignesPesee.map((p) => ({ date: p.date, poidsKg: Number(p.poids_kg) })),
   );
 
-  const majPesees = peseesLissees
-    .map((lissee, index) => ({ lissee, ligne: lignesPesee[index] }))
-    .filter(
-      (paire): paire is { lissee: PeseeLissee; ligne: LignePesee } =>
-        paire.ligne !== undefined,
-    )
-    .filter(
-      ({ lissee, ligne }) =>
-        Number(ligne.moyenne_mobile_7j_kg) !== lissee.moyenneMobile7jKg ||
-        ligne.aberrante !== lissee.aberrante,
-    );
-
-  if (majPesees.length > 0) {
-    await Promise.all(
-      majPesees.map(({ lissee, ligne }) =>
-        supabase
-          .from('pesee')
-          .update({
-            moyenne_mobile_7j_kg: lissee.moyenneMobile7jKg,
-            aberrante: lissee.aberrante,
-          })
-          .eq('id', ligne.id),
-      ),
-    );
-  }
-
   const apports: ApportJournalier[] = journees.map((j) => {
     const agregat = agregats.get(j.date);
     return {
@@ -166,7 +141,7 @@ export async function recalculerDepuis(entree: {
     };
   });
 
-  // 3. Réécriture des agrégats de `journee` sur la plage impactée.
+  // 3. Le calcul, en un seul passage sur le programme.
   const instantanes = calculerInstantanes({
     dateDebut: entree.dateImpactee,
     dateFin: entree.aujourdhui,
@@ -176,59 +151,69 @@ export async function recalculerDepuis(entree: {
     pesees: peseesLissees,
   });
 
-  const journeeParDate = new Map(journees.map((j) => [j.date, j]));
+  // Le détail journalier vient de `calculerBilan` sur la dernière date :
+  // il couvre tout le programme, on n'en garde que la plage réécrite.
+  const detailParDate = new Map(
+    calculerBilan({
+      date: entree.aujourdhui,
+      profil,
+      programme,
+      apports,
+      pesees: peseesLissees,
+    }).journees.map((j) => [j.date, j]),
+  );
 
-  const majJournees = instantanes.flatMap((instantane) => {
-    const existante = journeeParDate.get(instantane.date);
-    if (existante === undefined) return [];
+  const datesReecrites = new Set(instantanes.map((i) => i.date));
+  const journeesExistantesParDate = new Set(journees.map((j) => j.date));
 
-    const agregat = agregats.get(instantane.date);
-    return [
-      supabase
-        .from('journee')
-        .update({
-          programme_id: programmeActif.id,
-          apport_kcal: agregat?.kcal ?? 0,
-          proteines_g: agregat?.proteines ?? 0,
-          glucides_g: agregat?.glucides ?? 0,
-          lipides_g: agregat?.lipides ?? 0,
-          depense_retenue_kcal: instantane.depenseRetenueKcal,
-          statut: agregat === undefined ? 'manquant' : 'renseigne',
-        })
-        .eq('id', existante.id),
-    ];
+  const majJournees = [...datesReecrites]
+    .filter((date) => journeesExistantesParDate.has(date))
+    .map((date) => {
+      const agregat = agregats.get(date);
+      const detail = detailParDate.get(date);
+      return {
+        date,
+        apport_kcal: agregat?.kcal ?? 0,
+        proteines_g: agregat?.proteines ?? 0,
+        glucides_g: agregat?.glucides ?? 0,
+        lipides_g: agregat?.lipides ?? 0,
+        depense_retenue_kcal: detail?.depenseRetenueKcal ?? 0,
+        // `null` en mode neutre sur un jour manquant : le jour est exclu
+        // du cumul, il n'a pas de déficit — et surtout pas un déficit nul.
+        deficit_kcal: detail?.deficitKcal ?? null,
+        statut: detail?.statut ?? 'manquant',
+      };
+    });
+
+  // 4. Une seule écriture, en une transaction (spec §6.8). Une coupure
+  //    laisse la base dans l'état d'avant, jamais à moitié recalculée.
+  const { error } = await supabase.rpc('appliquer_recalcul', {
+    p_programme_id: programmeActif.id,
+    p_pesees: peseesLissees.map((p) => ({
+      date: p.date,
+      moyenne_mobile_7j_kg: p.moyenneMobile7jKg,
+      aberrante: p.aberrante,
+    })),
+    p_journees: majJournees,
+    p_instantanes: instantanes.map((i) => ({
+      date: i.date,
+      deficit_cumul_kcal: i.deficitCumulKcal,
+      kg_theoriques: i.kgTheoriques,
+      kg_reels: i.kgReels,
+      ecart_kg: i.ecartKg,
+      depense_reelle_kcal: i.depenseReelleKcal,
+      depense_retenue_kcal: i.depenseRetenueKcal,
+      depense_issue_du_reel: i.depenseIssueDuReel,
+      fiabilite: i.fiabilite,
+      allure_kg_semaine: i.allureKgSemaine,
+      completude: i.completude.taux,
+      jours_renseignes: i.completude.joursRenseignes,
+      jours_total: i.completude.joursTotal,
+      projection_date: i.projection.dateMediane,
+    })),
   });
 
-  await Promise.all(majJournees);
-
-  // 4. Instantanés. `upsert` sur (user_id, programme_id, date) : rejouer
-  //    le recalcul écrase la ligne au lieu d'en créer une seconde.
-  if (instantanes.length > 0) {
-    const { error } = await supabase.from('instantane_calcul').upsert(
-      instantanes.map((i) => ({
-        user_id: user.id,
-        programme_id: programmeActif.id,
-        date: i.date,
-        deficit_cumul_kcal: i.deficitCumulKcal,
-        kg_theoriques: i.kgTheoriques,
-        kg_reels: i.kgReels,
-        ecart_kg: i.ecartKg,
-        depense_reelle_kcal: i.depenseReelleKcal,
-        depense_retenue_kcal: i.depenseRetenueKcal,
-        depense_issue_du_reel: i.depenseIssueDuReel,
-        fiabilite: i.fiabilite,
-        allure_kg_semaine: i.allureKgSemaine,
-        completude: i.completude.taux,
-        jours_renseignes: i.completude.joursRenseignes,
-        jours_total: i.completude.joursTotal,
-        projection_date: i.projection.dateMediane,
-        calcule_le: new Date().toISOString(),
-      })),
-      { onConflict: 'user_id,programme_id,date' },
-    );
-
-    if (error !== null) return { erreur: error.message };
-  }
+  if (error !== null) return { erreur: error.message };
 
   return { instantanesEcrits: instantanes.length };
 }

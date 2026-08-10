@@ -26,6 +26,14 @@
  * typage avec un message qui ne désigne pas la cause.
  */
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [cle: string]: Json | undefined }
+  | Json[];
+
 export type Sexe = 'h' | 'f';
 export type NiveauActivite =
   | 'sedentaire'
@@ -192,7 +200,18 @@ export type Database = {
     // signature d'index fait échouer la contrainte — les tables se
     // résolvent alors en `never` et toute écriture est rejetée.
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      /** Applique en une transaction les écritures d'un recalcul. */
+      appliquer_recalcul: {
+        Args: {
+          p_programme_id: string;
+          p_pesees: Json;
+          p_journees: Json;
+          p_instantanes: Json;
+        };
+        Returns: number;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -146,17 +146,22 @@ refuse de démarrer. Vitest 3.2.7 n'a pas cette contrainte.
 À lever en passant la machine en Node 22 LTS — que Next 16 et l'écosystème visent de toute
 façon. Ce n'est pas urgent : rien d'autre ne dépend de cette version.
 
-### Le recalcul n'est pas transactionnel
+### Le recalcul écrit par RPC, le calcul reste en TypeScript
 
-La spec §6.8 demande une transaction. `lib/actions/recalcul.ts` enchaîne plusieurs
-allers-retours PostgREST : une coupure au milieu laisse des instantanés partiellement à
-jour.
+La spec §6.8 exige une transaction. `public.appliquer_recalcul(uuid, jsonb, jsonb, jsonb)`
+applique en une seule transaction les trois écritures — moyennes mobiles, agrégats de
+`journee`, instantanés. Une coupure laisse la base dans l'état d'avant, jamais à moitié
+recalculée.
 
-Sans gravité pour les données : `journee` et `instantane_calcul` sont **dérivés**, ils se
-reconstruisent intégralement au recalcul suivant. Aucune saisie n'est perdue.
+**Seules les écritures sont descendues en base.** Réimplémenter Mifflin-St Jeor, le lissage
+à 5 %, la dépense réelle et les trois modes de jours manquants en plpgsql dupliquerait la
+logique la plus critique du produit dans un second langage non testé. Et le moteur doit de
+toute façon tourner côté client pour que les indicateurs restent justes hors ligne (§8).
+La fonction ne décide rien : elle applique ce que `lib/calcul/` a calculé.
 
-Le durcissement consiste à basculer la fonction en procédure Postgres appelée par RPC.
-À faire avant toute mise en production, et pas avant d'avoir une base pour la tester.
+`security invoker`, donc la RLS s'applique. En `security definer` elle donnerait à chaque
+utilisateur le pouvoir d'écrire chez les autres, ce qui viderait de son sens tout le travail
+sur la RLS.
 
 ### Playwright tourne sur Chromium en 375 px, pas sur WebKit
 
