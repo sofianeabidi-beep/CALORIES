@@ -1,0 +1,14 @@
+-- Jeu de données de départ.
+--
+-- Phase 1 : rien à insérer. La saisie se fait à la main, sans catalogue.
+-- Phase 2 : import CIQUAL et amorçage du cache Open Food Facts.
+--
+-- L'import CIQUAL n'a pas sa place ici — plusieurs milliers de lignes
+-- dans un fichier de seed rendraient toute réinitialisation pénible. Il
+-- passera par un script dédié alimentant `public.aliment` via le rôle
+-- serveur, avec `source = 'ciqual'` et `source_ref` pointant le code
+-- CIQUAL d'origine.
+--
+-- Rappel licence : Open Food Facts est publiée sous ODbL. L'attribution
+-- est obligatoire dans l'application, et toute base dérivée redistribuée
+-- doit l'être sous la même licence. À valider avant commercialisation.
