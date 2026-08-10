@@ -10,7 +10,13 @@ const ONGLETS = [
 
 export default function LayoutApplication({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh pb-20">
+    /*
+     * La réserve du bas doit dégager deux éléments superposés : la
+     * navigation (56 px) et le bouton de saisie flottant, posé 80 px
+     * au-dessus du bord et haut de 48 px. Sous 144 px, la dernière
+     * carte de l'écran Aujourd'hui passe derrière le bouton.
+     */
+    <div className="min-h-dvh pb-36">
       {children}
 
       {/*
