@@ -169,6 +169,17 @@ Le serveur de test écoute sur le **port 3100**. En 3000, `reuseExistingServer` 
 serveur de développement d'un autre projet et les tests s'exécutaient contre la mauvaise
 application.
 
+### Supabase refuse certains domaines à l'inscription
+
+GoTrue rejette `example.com` et le TLD `.test` : « Email address is invalid ». Ce n'est pas
+un défaut de l'application — la validation Zod, les deux consentements et la remontée
+d'erreur fonctionnent, seul l'appel `signUp` échoue.
+
+Conséquence pratique : l'inscription se teste avec un domaine réel. Si la confirmation par
+courriel est active, prévoir de la désactiver en développement (Dashboard → Authentication
+→ Providers → Email), sans quoi `signUp` ne rend pas de session et l'insertion du profil
+échoue sur la RLS.
+
 ## Points ouverts
 
 - **Objectifs cycliques** (objectif différent le week-end, brief §4.2) : absents du schéma

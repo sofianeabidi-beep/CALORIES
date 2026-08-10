@@ -89,7 +89,29 @@ tests/e2e/    Playwright
 
 ## Avancement
 
-Phase 1 en cours. Voir `CLAUDE.md` pour les décisions prises et les points ouverts.
+**Phase 1 terminée et vérifiée contre une base réelle.** Projet Supabase `caloryes`,
+région `eu-west-3` (Paris).
+
+Vérifié le 2026-08-10, application lancée et pilotée de bout en bout :
+
+- les six migrations passent sur une base vierge ;
+- les treize tables portent la RLS, quatre policies chacune sauf `aliment` (lecture seule
+  authentifiée, écriture serveur) ;
+- les huit garde-fous se déclenchent en base — âge, plancher calorique par sexe, IMC cible,
+  allure dans les deux sens, unicité du programme actif ;
+- les trois garde-fous remontent aussi dans l'interface, chacun sur son champ, avec les
+  valeurs calculées (59,9 kg pour 1,80 m, 0,80 kg/semaine à 80 kg, 1 500 kcal) ;
+- la chaîne de calcul est juste et recalculable à la main : profil homme 36 ans, 180 cm,
+  niveau modéré → `(10×80 + 6,25×180 − 5×36 + 5) × 1,55 = 2 712,5 kcal`, moins 600 kcal
+  saisis = **2 112,5 kcal de déficit**, soit 0,27 kg théoriques ;
+- une pesée à 79,4 kg réduit la dépense à 2 703 kcal et l'écart théorie/réel est interprété
+  dans le bon sens ;
+- la suppression du compte efface tout par cascade.
+
+Restent à faire avant la phase 2 : tests RLS automatisés (un par table), parcours Playwright
+authentifié, et l'inscription à tester avec un domaine de courriel accepté par Supabase.
+
+Voir `CLAUDE.md` pour les décisions prises et les points ouverts.
 
 ## Licences des sources de données
 

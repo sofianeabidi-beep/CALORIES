@@ -1,13 +1,18 @@
 /**
  * Types de la base, tenus à la main.
  *
- * `supabase gen types typescript` a besoin d'un projet accessible ; il
- * n'y en a pas encore. Ce fichier reproduit les migrations de
- * `supabase/migrations/` et **doit être régénéré** dès que le projet
- * existe :
+ * **Confrontés à la sortie de `supabase gen types typescript` le
+ * 2026-08-10** : mêmes colonnes, mêmes obligations à l'insertion. Ce
+ * fichier reste la version de référence parce que la génération
+ * automatique élargit en `string` toutes les colonnes contraintes par
+ * un `check` — `sexe`, `niveau_activite`, `repas`, `statut`, `source`.
+ * Or ces unions littérales sont précisément ce qui empêche de passer
+ * une valeur inexistante au moteur de calcul.
+ *
+ * À reconfronter après toute migration :
  *
  * ```bash
- * npx supabase gen types typescript --linked > lib/supabase/types.ts
+ * npx supabase gen types typescript --linked
  * ```
  *
  * Seules les tables utilisées en phase 1 sont décrites. Les colonnes
