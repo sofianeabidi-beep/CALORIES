@@ -106,6 +106,24 @@ est habituelle, le TDEE recalculé la capte sur la fenêtre de 28 jours. Si le b
 sensibilité au jour le jour se confirme, la bonne réponse est un **override ponctuel de
 `depense_retenue`**, pas un champ additif.
 
+### Le signe de la dépense réelle recalculée
+
+```
+depense_reelle = apport_moyen − (variation_poids_kg × 7700 / nb_jours)
+```
+
+La spec §6.3 et le brief §3.2 écrivent tous deux `+ (Δ poids × 7700 / n)`. Cette écriture
+n'est juste que si `Δ` désigne la *perte* — positive quand on maigrit. Le moteur définit
+`variationKg = poidsFin − poidsDébut`, négatif quand on maigrit : le signe est donc `−`.
+
+Vérification, à refaire à la main si quelqu'un touche à cette fonction : 2 000 kcal/j et
+1 kg perdu en 28 jours donnent `2000 − (−1 × 7700 / 28) = 2275` kcal/j. Une dépense
+supérieure à l'apport, ce qui est bien la définition d'une perte. Le signe inverse
+donnerait 1 725 kcal/j, soit une dépense inférieure à l'apport pendant qu'on maigrit.
+
+C'est le calcul le plus important du produit : une erreur de signe ici inverse la
+correction du métabolisme et rend toutes les projections fausses dans le mauvais sens.
+
 ### `supprime_le` ajouté dès la première migration
 
 Le §8 impose des suppressions logiques horodatées pour que la synchro multi-appareils ne
@@ -118,6 +136,15 @@ Choix du commanditaire (2026-08-10) : « personnel d'abord, commercial ensuite �
 Schéma complet et RLS complète **dès maintenant** — la partie coûteuse à rattraper.
 Reportés en phase 3 : export JSON/CSV, fonction de purge, cron d'entretien, durées de
 conservation. À rouvrir avant toute commercialisation.
+
+### Vitest tenu en version 3
+
+Vitest 4 s'appuie sur Rolldown, qui exige Node `^20.19.0 || >=22.12.0`. La machine de
+développement tourne en 20.15.1 : npm écarte silencieusement le binaire natif et Vitest
+refuse de démarrer. Vitest 3.2.7 n'a pas cette contrainte.
+
+À lever en passant la machine en Node 22 LTS — que Next 16 et l'écosystème visent de toute
+façon. Ce n'est pas urgent : rien d'autre ne dépend de cette version.
 
 ## Points ouverts
 

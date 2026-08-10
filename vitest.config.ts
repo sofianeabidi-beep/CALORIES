@@ -18,6 +18,9 @@ export default defineConfig({
       // invisible et grave. La spec exige 100 % — le seuil est imposé
       // par la config, pas seulement constaté.
       include: ['lib/calcul/**/*.ts'],
+      // `types.ts` ne contient que des types : il est entièrement effacé
+      // à la compilation, il n'y a rien à couvrir.
+      exclude: ['lib/calcul/types.ts'],
       thresholds: {
         lines: 100,
         functions: 100,
