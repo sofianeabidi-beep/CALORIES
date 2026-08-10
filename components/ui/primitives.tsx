@@ -111,7 +111,7 @@ export function Champ({
   nom: string;
   libelle: string;
   type?: string;
-  defaultValue?: string | number;
+  defaultValue?: string | number | undefined;
   required?: boolean;
   // `| undefined` explicite : sous `exactOptionalPropertyTypes`, un prop
   // simplement optionnel refuse qu'on lui passe `undefined`, ce que fait
