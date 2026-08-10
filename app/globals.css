@@ -1,0 +1,123 @@
+@import 'tailwindcss';
+
+/*
+ * Charte de la section 10 de la spec.
+ *
+ * Parti pris à ne pas défaire : aucun vert ni rouge sur les journées.
+ * Déficit et surplus sont des directions, pas des verdicts moraux.
+ * Le bleu-vert marque le déficit, l'ambre le surplus. Le rouge est
+ * réservé aux garde-fous et aux erreurs — il est rare, donc lisible.
+ */
+
+:root {
+  --couleur-graphite: #1a1d21;
+  --couleur-ardoise: #5b6470;
+  --couleur-papier: #f4f5f3;
+  --couleur-surface: #ffffff;
+  --couleur-trait: #dde0dc;
+  --couleur-deficit: #1f6f78;
+  --couleur-surplus: #c77b30;
+  --couleur-signal: #b3402f;
+}
+
+/*
+ * Le mode sombre est obligatoire et de qualité égale : une part
+ * importante des saisies a lieu le soir. Les teintes d'accent sont
+ * éclaircies pour tenir le contraste AA sur fond sombre — reprendre
+ * les valeurs du mode clair telles quelles donnerait 2,4:1.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='clair']) {
+    --couleur-graphite: #e8eae7;
+    --couleur-ardoise: #98a1ad;
+    --couleur-papier: #14161a;
+    --couleur-surface: #1d2026;
+    --couleur-trait: #2e333b;
+    --couleur-deficit: #4fa8b3;
+    --couleur-surplus: #e0a05c;
+    --couleur-signal: #e0705e;
+  }
+}
+
+:root[data-theme='sombre'] {
+  --couleur-graphite: #e8eae7;
+  --couleur-ardoise: #98a1ad;
+  --couleur-papier: #14161a;
+  --couleur-surface: #1d2026;
+  --couleur-trait: #2e333b;
+  --couleur-deficit: #4fa8b3;
+  --couleur-surplus: #e0a05c;
+  --couleur-signal: #e0705e;
+}
+
+@theme inline {
+  --color-graphite: var(--couleur-graphite);
+  --color-ardoise: var(--couleur-ardoise);
+  --color-papier: var(--couleur-papier);
+  --color-surface: var(--couleur-surface);
+  --color-trait: var(--couleur-trait);
+  --color-deficit: var(--couleur-deficit);
+  --color-surplus: var(--couleur-surplus);
+  --color-signal: var(--couleur-signal);
+
+  /* Sans-serif système : aucun chargement de police distante sur le
+     chemin critique, l'application s'ouvre 4 à 6 fois par jour. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+  /* Empêche le zoom automatique d'iOS sur les champs de saisie. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--couleur-papier);
+  color: var(--couleur-graphite);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Les chiffres sont les héros. Partout où des nombres s'alignent en
+ * colonne ou s'animent, ils doivent occuper la même largeur, sinon la
+ * valeur « saute » à chaque mise à jour.
+ */
+.chiffre {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Libellés en petites capitales interlettrées (section 10). */
+.libelle {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--couleur-ardoise);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Cibles tactiles de 44 px minimum (section 10, accessibilité). */
+button,
+a[role='button'],
+input[type='submit'] {
+  min-height: 44px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--couleur-deficit);
+  outline-offset: 2px;
+}
