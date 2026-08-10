@@ -108,8 +108,23 @@ Vérifié le 2026-08-10, application lancée et pilotée de bout en bout :
   dans le bon sens ;
 - la suppression du compte efface tout par cascade.
 
-Restent à faire avant la phase 2 : tests RLS automatisés (un par table), parcours Playwright
-authentifié, et l'inscription à tester avec un domaine de courriel accepté par Supabase.
+### Tests RLS
+
+`supabase/tests/rls.sql` — **29 tests, tous verts**. Deux utilisateurs, un jeu complet de
+données appartenant à A, et la vérification que B ne voit ni ne touche rien : lecture à
+zéro ligne sur les douze tables, écriture au nom de A refusée, modification et suppression
+sans effet. Puis A retrouve ses douze lignes intactes.
+
+Le test prend l'identité d'un utilisateur en posant `request.jwt.claims` et en basculant sur
+le rôle `authenticated`, exactement comme PostgREST. Sous le rôle propriétaire la RLS serait
+contournée et le test ne prouverait rien. Il se termine par un `rollback` : la base est
+rendue telle quelle.
+
+À rejouer après toute migration, en collant le contenu du fichier dans le SQL Editor du
+dashboard.
+
+Restent à faire avant la phase 2 : parcours Playwright authentifié, et l'inscription à
+tester avec un domaine de courriel accepté par Supabase.
 
 Voir `CLAUDE.md` pour les décisions prises et les points ouverts.
 
