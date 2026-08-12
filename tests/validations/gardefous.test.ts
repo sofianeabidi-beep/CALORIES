@@ -5,12 +5,13 @@ import { schemaEntree, schemaPesee } from '@/lib/validations/journal';
 
 const AUJOURDHUI = '2026-08-10';
 
-const HOMME: ContexteGardefous = { sexe: 'h', tailleCm: 180 };
-const FEMME: ContexteGardefous = { sexe: 'f', tailleCm: 165 };
+const HOMME: ContexteGardefous = { sexe: 'h' };
+const FEMME: ContexteGardefous = { sexe: 'f' };
 
 const PROGRAMME_VALIDE = {
   type: 'deficit' as const,
   dateDebut: '2026-08-10',
+  tailleCm: 180,
   poidsDepartKg: 80,
   poidsCibleKg: 75,
   allureCibleKgSemaine: -0.5,
@@ -41,6 +42,7 @@ describe('schemaProgramme — les garde-fous de la section 9', () => {
     // 1 400 kcal passe pour une femme : le plancher est à 1 200.
     const femme = schemaProgramme(FEMME).safeParse({
       ...PROGRAMME_VALIDE,
+      tailleCm: 165,
       poidsDepartKg: 65,
       poidsCibleKg: 60,
       allureCibleKgSemaine: -0.4,
@@ -52,6 +54,7 @@ describe('schemaProgramme — les garde-fous de la section 9', () => {
   it('oriente vers un professionnel plutôt que de sermonner', () => {
     const resultat = schemaProgramme(FEMME).safeParse({
       ...PROGRAMME_VALIDE,
+      tailleCm: 165,
       poidsDepartKg: 65,
       poidsCibleKg: 60,
       allureCibleKgSemaine: -0.4,
@@ -110,10 +113,20 @@ describe('schemaProgramme — les garde-fous de la section 9', () => {
     const resultat = schemaProgramme(HOMME).safeParse({
       type: 'maintien',
       dateDebut: '2026-08-10',
+      tailleCm: 180,
       poidsDepartKg: 80,
     });
 
     expect(resultat.success).toBe(true);
+  });
+
+  it('refuse une taille hors bornes', () => {
+    const resultat = schemaProgramme(HOMME).safeParse({
+      ...PROGRAMME_VALIDE,
+      tailleCm: 80,
+    });
+
+    expect(resultat.success).toBe(false);
   });
 
   it('refuse une date mal formée', () => {
@@ -142,7 +155,6 @@ describe('schemaProfil', () => {
   const PROFIL_VALIDE = {
     sexe: 'h' as const,
     dateNaissance: '1990-06-15',
-    tailleCm: 180,
     niveauActivite: 'modere' as const,
   };
 
@@ -181,11 +193,6 @@ describe('schemaProfil', () => {
     ).toBe(false);
   });
 
-  it('refuse une taille hors bornes', () => {
-    expect(
-      schemaProfil(AUJOURDHUI).safeParse({ ...PROFIL_VALIDE, tailleCm: 80 }).success,
-    ).toBe(false);
-  });
 });
 
 describe('schemaConsentements', () => {

@@ -54,6 +54,11 @@ export async function lireJournee(date: DateIso): Promise<VueJournee | null> {
   const programmeLigne = programmeReponse.data;
   if (profilLigne === null || programmeLigne === null) return null;
 
+  // Garanti par le trigger `verifier_gardefous_programme` : un programme
+  // ne peut pas exister tant que la taille n'est pas renseignée. Dès
+  // qu'on tient un programme, la taille est donc non nulle.
+  if (profilLigne.taille_cm === null) return null;
+
   const [journeesReponse, peseesReponse] = await Promise.all([
     supabase
       .from('journee')

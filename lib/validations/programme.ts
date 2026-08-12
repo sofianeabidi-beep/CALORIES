@@ -6,7 +6,7 @@ import {
   verifierPoidsCible,
   type Sexe,
 } from '@/lib/calcul';
-import { dateIso, poidsKg } from './commun';
+import { dateIso, poidsKg, tailleCm } from './commun';
 
 /**
  * Programme de régime.
@@ -16,6 +16,10 @@ import { dateIso, poidsKg } from './commun';
  * couches, une seule définition des bornes. Une règle réécrite ici
  * finirait par diverger de la base, et le produit afficherait une chose
  * en refusant l'autre.
+ *
+ * **La taille se saisit ici, pas à l'inscription.** `libelle` sert de
+ * pseudo dans l'interface — c'est un nom d'affichage facultatif, pas un
+ * identifiant technique.
  */
 
 export const schemaProgrammeBase = z.object({
@@ -25,6 +29,7 @@ export const schemaProgrammeBase = z.object({
   }),
   dateDebut: dateIso,
   dateFin: dateIso.nullish(),
+  tailleCm,
   poidsDepartKg: poidsKg,
   poidsCibleKg: poidsKg.nullish(),
   allureCibleKgSemaine: z.number().nullish(),
@@ -33,13 +38,12 @@ export const schemaProgrammeBase = z.object({
 
 export interface ContexteGardefous {
   readonly sexe: Sexe;
-  readonly tailleCm: number;
 }
 
 /**
  * Schéma complet, dépendant du profil : le plancher calorique varie
- * selon le sexe et l'IMC cible dépend de la taille. Un schéma isolé ne
- * peut pas trancher, d'où le passage explicite du contexte.
+ * selon le sexe. La taille, elle, fait désormais partie de la saisie
+ * elle-même — inutile de la faire transiter par le contexte.
  */
 export function schemaProgramme(contexte: ContexteGardefous) {
   return schemaProgrammeBase.superRefine((valeurs, ctx) => {
@@ -75,7 +79,7 @@ export function schemaProgramme(contexte: ContexteGardefous) {
     if (valeurs.poidsCibleKg !== null && valeurs.poidsCibleKg !== undefined) {
       const controle = verifierPoidsCible({
         poidsCibleKg: valeurs.poidsCibleKg,
-        tailleCm: contexte.tailleCm,
+        tailleCm: valeurs.tailleCm,
       });
 
       if (!controle.conforme) {

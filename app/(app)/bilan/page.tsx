@@ -3,13 +3,29 @@ import { lireJournee } from '@/lib/donnees/journee';
 import { aujourdhuiIso, formaterDate } from '@/lib/dates-app';
 import { IndicateurCumule } from '@/components/bilan/indicateur-cumule';
 import { Carte, Chiffre, Libelle } from '@/components/ui/primitives';
-import { KCAL_PAR_KG } from '@/lib/calcul';
+import { calculerImc, KCAL_PAR_KG } from '@/lib/calcul';
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const uneDecimale = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 const deuxDecimales = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+/**
+ * Catégories usuelles de l'OMS. Affichage informatif, pas un verdict :
+ * même parti pris que le reste de l'application (spec §10) — aucune
+ * couleur de jugement, l'IMC est un indicateur parmi d'autres.
+ */
+function categorieImc(imc: number): string {
+  if (imc < 18.5) return 'Insuffisance pondérale';
+  if (imc < 25) return 'Corpulence normale';
+  if (imc < 30) return 'Surpoids';
+  return 'Obésité';
+}
 
 /**
  * Les quatre indicateurs (spec §1).
@@ -25,6 +41,15 @@ export default async function Bilan() {
 
   const { bilan } = vue;
   const enDeficit = bilan.deficitCumulKcal >= 0;
+
+  // `kgReels` est un écart (départ − actuel), pas un poids absolu :
+  // il faut le recomposer avec le poids de départ du programme. Sans
+  // pesée, on affiche le poids de départ faute de mieux.
+  const poidsActuelKg =
+    bilan.kgReels === null
+      ? Number(vue.programme.poids_depart_kg)
+      : Number(vue.programme.poids_depart_kg) - bilan.kgReels;
+  const tailleCm = vue.profil.taille_cm;
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6">
@@ -141,6 +166,38 @@ export default async function Bilan() {
           </>
         )}
       </Carte>
+
+      {tailleCm !== null && (
+        <Carte>
+          <Libelle>Poids et taille</Libelle>
+          <div className="mt-3 flex items-baseline justify-between gap-4">
+            <div>
+              <p className="text-xs text-ardoise">Poids actuel</p>
+              <Chiffre valeur={uneDecimale.format(poidsActuelKg)} unite="kg" taille="moyen" />
+            </div>
+            <div>
+              <p className="text-xs text-ardoise">Taille</p>
+              <Chiffre valeur={entier.format(tailleCm)} unite="cm" taille="moyen" />
+            </div>
+          </div>
+
+          <div className="mt-3 border-t border-trait pt-2">
+            <p className="text-xs text-ardoise">IMC</p>
+            <Chiffre
+              valeur={deuxDecimales.format(calculerImc(poidsActuelKg, tailleCm))}
+              taille="moyen"
+            />
+            <p className="mt-1 text-sm text-graphite">
+              {categorieImc(calculerImc(poidsActuelKg, tailleCm))}
+            </p>
+          </div>
+
+          <p className="mt-2 text-sm text-ardoise">
+            L’IMC ne distingue pas masse grasse et masse musculaire : c’est un indicateur
+            parmi d’autres, pas un verdict.
+          </p>
+        </Carte>
+      )}
     </main>
   );
 }

@@ -51,7 +51,9 @@ export type LigneProfil = {
   user_id: string;
   sexe: Sexe;
   date_naissance: string;
-  taille_cm: number;
+  // Recueillie à la création du programme, plus à l'inscription : la
+  // colonne est nullable entre les deux (décision produit, 2026-08-12).
+  taille_cm: number | null;
   niveau_activite: NiveauActivite;
   mode_jours_manquants: ModeJoursManquants;
   unite_poids: string;
@@ -178,7 +180,7 @@ type Table<Ligne, Requis extends keyof Ligne> = {
 export type Database = {
   public: {
     Tables: {
-      profil: Table<LigneProfil, 'sexe' | 'date_naissance' | 'taille_cm'>;
+      profil: Table<LigneProfil, 'sexe' | 'date_naissance'>;
       programme: Table<LigneProgramme, 'type' | 'date_debut' | 'poids_depart_kg'>;
       journee: Table<LigneJournee, 'date'>;
       entree: Table<

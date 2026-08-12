@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import { AGE_MINIMUM, verifierAge } from '@/lib/calcul';
-import {
-  dateIso,
-  modeJoursManquants,
-  niveauActivite,
-  sexe,
-  tailleCm,
-} from './commun';
+import { dateIso, modeJoursManquants, niveauActivite, sexe } from './commun';
 
 /**
  * Profil utilisateur.
@@ -14,11 +8,15 @@ import {
  * Le contrôle des 18 ans dépend de la date du jour : elle est passée en
  * paramètre plutôt que lue par le schéma, pour la même raison que dans
  * le moteur — un schéma qui lit l'horloge n'est pas testable.
+ *
+ * **La taille n'est pas recueillie ici.** Elle arrive à la création du
+ * programme (`lib/validations/programme.ts`), pas à l'inscription : moins
+ * de champs pour ouvrir un compte, la taille arrive au moment où elle
+ * sert vraiment (dépense de Mifflin-St Jeor, garde-fou d'IMC cible).
  */
 export const schemaProfilBase = z.object({
   sexe,
   dateNaissance: dateIso,
-  tailleCm,
   niveauActivite,
   modeJoursManquants: modeJoursManquants.default('neutre'),
   unitePoids: z.enum(['kg', 'lb']).default('kg'),

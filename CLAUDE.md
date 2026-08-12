@@ -213,6 +213,23 @@ courriel est active, prévoir de la désactiver en développement (Dashboard →
 → Providers → Email), sans quoi `signUp` ne rend pas de session et l'insertion du profil
 échoue sur la RLS.
 
+### La taille se saisit à la création du programme, pas à l'inscription
+
+Décision produit du 2026-08-12 : moins de champs pour ouvrir un compte, la taille arrive au
+moment où elle sert vraiment (Mifflin-St Jeor, garde-fou d'IMC cible). `profil.taille_cm`
+est donc **nullable** entre les deux étapes.
+
+Le trigger `verifier_gardefous_programme` a été renforcé en conséquence : sans ce contrôle
+explicite, un poids cible arrivant avant que la taille soit connue comparerait un IMC à
+`null` — en SQL, `null < 18.5` ne vaut ni vrai ni faux, l'exception ne se déclencherait
+jamais et le garde-fou serait silencieusement contourné plutôt que bloqué. Vérifié
+directement contre la base : un programme sans taille connue est refusé, avec taille
+connue il passe.
+
+`lib/donnees/journee.ts` et `lib/actions/recalcul.ts` renvoient une erreur explicite si
+`taille_cm` est encore `null` à ce stade — c'est un état transitoire (entre inscription et
+création du programme), jamais un état dans lequel le moteur de calcul doit tourner.
+
 ## Points ouverts
 
 - **Objectifs cycliques** (objectif différent le week-end, brief §4.2) : absents du schéma

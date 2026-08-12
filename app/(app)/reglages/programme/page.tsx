@@ -18,6 +18,7 @@ async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat
     libelle: donnees.get('libelle') || undefined,
     type: donnees.get('type'),
     dateDebut: donnees.get('dateDebut'),
+    tailleCm: Number(donnees.get('tailleCm')),
     poidsDepartKg: Number(donnees.get('poidsDepartKg')),
     poidsCibleKg: nombreOuNull(donnees.get('poidsCibleKg')),
     allureCibleKgSemaine: nombreOuNull(donnees.get('allureCibleKgSemaine')),
@@ -41,11 +42,11 @@ export default function Programme() {
 
       <Carte>
         <form action={envoyer} className="flex flex-col gap-4">
-          <Champ nom="libelle" libelle="Nom (facultatif)" erreurs={champs?.libelle} />
+          <Champ nom="libelle" libelle="Pseudo (facultatif)" erreurs={champs?.libelle} />
 
           <Selecteur
             nom="type"
-            libelle="Type"
+            libelle="Objectif"
             options={[
               { valeur: 'deficit', texte: 'Déficit — perdre du poids' },
               { valeur: 'surplus', texte: 'Surplus — prendre du poids' },
@@ -61,6 +62,17 @@ export default function Programme() {
             defaultValue={aujourdhuiIso()}
             required
             erreurs={champs?.dateDebut}
+          />
+
+          <Champ
+            nom="tailleCm"
+            libelle="Taille (cm)"
+            type="number"
+            inputMode="numeric"
+            min="100"
+            max="250"
+            required
+            erreurs={champs?.tailleCm}
           />
 
           <Champ

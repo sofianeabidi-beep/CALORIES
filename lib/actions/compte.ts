@@ -16,6 +16,22 @@ const schemaIdentifiants = z.object({
     .min(8, { message: 'Le mot de passe doit faire au moins 8 caractères.' }),
 });
 
+/**
+ * Uniquement pour l'inscription : `seConnecter` n'a pas de confirmation
+ * à vérifier, ce serait une contrainte sans objet à la connexion.
+ */
+const schemaInscriptionIdentifiants = schemaIdentifiants
+  .extend({ confirmationMotDePasse: z.string() })
+  .superRefine((valeurs, ctx) => {
+    if (valeurs.confirmationMotDePasse !== valeurs.motDePasse) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['confirmationMotDePasse'],
+        message: 'Les deux mots de passe ne correspondent pas.',
+      });
+    }
+  });
+
 function champsDe(erreur: z.ZodError): Record<string, string[]> {
   return erreur.flatten().fieldErrors as Record<string, string[]>;
 }
@@ -48,11 +64,14 @@ export async function seConnecter(donnees: unknown): Promise<Resultat> {
  * Trois choses se jouent ici, dans cet ordre : le contrôle des 18 ans,
  * les deux consentements horodatés séparément, et la création du profil.
  * Aucune n'est optionnelle.
+ *
+ * La taille n'est pas demandée ici : elle arrive à la création du
+ * programme, l'étape suivante.
  */
 export async function sInscrire(donnees: unknown): Promise<Resultat> {
   const brut = donnees as Record<string, unknown>;
 
-  const identifiants = schemaIdentifiants.safeParse(brut);
+  const identifiants = schemaInscriptionIdentifiants.safeParse(brut);
   if (!identifiants.success) {
     return { ok: false, erreur: 'Saisie invalide.', champs: champsDe(identifiants.error) };
   }
@@ -86,7 +105,6 @@ export async function sInscrire(donnees: unknown): Promise<Resultat> {
     user_id: data.user.id,
     sexe: profil.data.sexe,
     date_naissance: profil.data.dateNaissance,
-    taille_cm: profil.data.tailleCm,
     niveau_activite: profil.data.niveauActivite,
     mode_jours_manquants: profil.data.modeJoursManquants,
     unite_poids: profil.data.unitePoids,
@@ -124,7 +142,7 @@ export async function enregistrerProgramme(donnees: unknown): Promise<Resultat> 
 
   const { data: profil } = await supabase
     .from('profil')
-    .select('sexe, taille_cm')
+    .select('sexe')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -132,16 +150,23 @@ export async function enregistrerProgramme(donnees: unknown): Promise<Resultat> 
     return { ok: false, erreur: 'Renseignez votre profil avant de créer un programme.' };
   }
 
-  const analyse = schemaProgramme({
-    sexe: profil.sexe,
-    tailleCm: profil.taille_cm,
-  }).safeParse(donnees);
+  const analyse = schemaProgramme({ sexe: profil.sexe }).safeParse(donnees);
 
   if (!analyse.success) {
     return { ok: false, erreur: 'Programme invalide.', champs: champsDe(analyse.error) };
   }
 
   const saisie = analyse.data;
+
+  // La taille rejoint le profil ici, pas à l'inscription. Doit être
+  // écrite avant l'insertion du programme : le trigger de garde-fous la
+  // relit depuis `profil` pour vérifier l'IMC cible.
+  const { error: erreurTaille } = await supabase
+    .from('profil')
+    .update({ taille_cm: saisie.tailleCm })
+    .eq('user_id', user.id);
+
+  if (erreurTaille !== null) return { ok: false, erreur: erreurTaille.message };
 
   // Un seul programme actif à la fois : l'index unique partiel refuserait
   // le second, il faut clore le précédent d'abord.

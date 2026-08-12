@@ -12,9 +12,9 @@ async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat
   return sInscrire({
     email: donnees.get('email'),
     motDePasse: donnees.get('motDePasse'),
+    confirmationMotDePasse: donnees.get('confirmationMotDePasse'),
     sexe: donnees.get('sexe'),
     dateNaissance: donnees.get('dateNaissance'),
-    tailleCm: Number(donnees.get('tailleCm')),
     niveauActivite: donnees.get('niveauActivite'),
     cguAcceptees: donnees.get('cguAcceptees') === 'on',
     consentementSante: donnees.get('consentementSante') === 'on',
@@ -61,6 +61,14 @@ export default function Inscription() {
           required
           erreurs={champs?.motDePasse}
         />
+        <Champ
+          nom="confirmationMotDePasse"
+          libelle="Confirmer le mot de passe"
+          type="password"
+          autoComplete="new-password"
+          required
+          erreurs={champs?.confirmationMotDePasse}
+        />
 
         <Selecteur
           nom="sexe"
@@ -78,17 +86,6 @@ export default function Inscription() {
           type="date"
           required
           erreurs={champs?.dateNaissance}
-        />
-
-        <Champ
-          nom="tailleCm"
-          libelle="Taille (cm)"
-          type="number"
-          inputMode="numeric"
-          min="100"
-          max="250"
-          required
-          erreurs={champs?.tailleCm}
         />
 
         <Selecteur

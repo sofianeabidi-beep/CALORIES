@@ -51,6 +51,10 @@ export async function recalculerDepuis(entree: {
 
   if (profilLigne === null) return { erreur: 'Profil incomplet.' };
 
+  // Garanti par le trigger `verifier_gardefous_programme` : aucun
+  // programme ne peut exister tant que la taille n'est pas renseignée.
+  if (profilLigne.taille_cm === null) return { erreur: 'Taille manquante.' };
+
   const { data: programmeLigne } = await supabase
     .from('programme')
     .select('*')
