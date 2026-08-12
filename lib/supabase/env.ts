@@ -34,27 +34,47 @@ function nettoyer(valeur: string): string {
   return valeur.replace(/[^\x20-\x7E]/g, '');
 }
 
-function resoudre(nom: string, valeur: string | undefined, parDefaut: string): string {
+/**
+ * Une clé anonyme Supabase (JWT) est trois segments base64url séparés
+ * par un point. Un tronçon perdu au copier-coller donne un texte non
+ * vide mais qui n'a plus cette forme : ne pas s'arrêter à « non vide »
+ * aurait laissé passer exactement le genre de valeur qui a provoqué
+ * l'« Invalid API key » observée en production le 2026-08-12, une fois
+ * le premier filtre (caractères hors ASCII) déjà en place.
+ */
+const FORME_JWT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const FORME_URL_SUPABASE = /^https:\/\/[a-z0-9]+\.supabase\.co$/;
+
+function resoudre(
+  nom: string,
+  valeur: string | undefined,
+  parDefaut: string,
+  formeAttendue: RegExp,
+): string {
   const nettoyee = valeur === undefined ? '' : nettoyer(valeur);
-  if (nettoyee === '') {
-    if (parDefaut === '') {
-      throw new Error(
-        `Variable d'environnement manquante : ${nom}. Voir .env.example.`,
-      );
-    }
+  if (formeAttendue.test(nettoyee)) {
+    return nettoyee;
+  }
+  if (parDefaut !== '') {
     return parDefaut;
   }
-  return nettoyee;
+  throw new Error(`Variable d'environnement manquante ou mal formée : ${nom}. Voir .env.example.`);
 }
 
 /** Configuration publique, utilisable dans le navigateur. */
 export function configPublique(): { url: string; cleAnon: string } {
   return {
-    url: resoudre('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL, URL_PAR_DEFAUT),
+    url: resoudre(
+      'NEXT_PUBLIC_SUPABASE_URL',
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      URL_PAR_DEFAUT,
+      FORME_URL_SUPABASE,
+    ),
     cleAnon: resoudre(
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       CLE_ANON_PAR_DEFAUT,
+      FORME_JWT,
     ),
   };
 }

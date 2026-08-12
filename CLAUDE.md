@@ -174,18 +174,28 @@ Le serveur de test écoute sur le **port 3100**. En 3000, `reuseExistingServer` 
 serveur de développement d'un autre projet et les tests s'exécutaient contre la mauvaise
 application.
 
-### Les variables Supabase publiques ont un repli codé en dur
+### Les variables Supabase publiques ont un repli codé en dur, validé par forme
 
 `lib/supabase/env.ts` nettoie `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-de tout caractère hors ASCII imprimable, et retombe sur les vraies valeurs du projet
-`caloryes` si la variable d'environnement est absente ou ne contient plus que du bruit
-après nettoyage.
+de tout caractère hors ASCII imprimable, **puis vérifie leur forme** — une clé anonyme doit
+avoir la forme d'un JWT (trois segments base64url séparés par un point), une URL doit
+pointer vers `*.supabase.co`. Si ça ne correspond pas, repli sur les vraies valeurs du
+projet `caloryes`.
 
-Incident réel en production (2026-08-12) : une puce « • » (U+2022) glissée dans la valeur
-collée sur Vercel a fait échouer la construction des en-têtes HTTP du client Supabase, avec
-une erreur `ByteString` qui ne pointe vers aucune cause identifiable. L'outillage disponible
-ne permet pas de modifier les variables d'environnement d'un projet Vercel à distance —
-seul l'humain avec l'accès au dashboard peut les corriger.
+Deux incidents réels en production, le même jour (2026-08-12), sur la même cause racine :
+une variable mal collée dans l'interface Vercel.
+
+1. Une puce « • » (U+2022) dans la valeur a fait échouer la construction des en-têtes HTTP
+   du client Supabase, avec une erreur `ByteString` qui ne pointe vers aucune cause.
+2. Le filtre ASCII posé en réponse ne vérifiait que « non vide » — un tronçon de JWT perdu
+   au copier-coller est resté non vide, et non nettoyé par le filtre puisqu'il ne contenait
+   que des caractères ASCII valides. Supabase a répondu « Invalid API key », cette fois
+   depuis son propre serveur plutôt qu'avant même d'y arriver.
+
+D'où la validation par forme plutôt que par simple présence. L'outillage disponible ne
+permet pas de modifier les variables d'environnement d'un projet Vercel à distance — seul
+l'humain avec l'accès au dashboard peut les corriger à la source ; ce repli limite les
+dégâts en attendant.
 
 Ce n'est pas un secret qu'on cache dans le code : la clé anonyme est conçue pour finir dans
 le bundle du navigateur, elle est bornée par la RLS. `SUPABASE_SERVICE_ROLE_KEY` n'a
