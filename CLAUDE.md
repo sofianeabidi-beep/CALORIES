@@ -254,6 +254,34 @@ aliments d'affilée (l'objectif des 10 secondes). Une vraie confirmation demande
 local distinct de `etat.ok`, une décision d'interface à trancher plutôt qu'à corriger en
 vitesse.
 
+### Estimation nutritionnelle par IA, en dernier recours
+
+Décision du 2026-08-12 : plutôt qu'un fil de discussion façon WhatsApp, une zone de texte
+libre sur l'écran de saisie (« Décrire ce que vous avez mangé ») qui préremplit les champs
+existants via l'API Anthropic. Les champs restent modifiables — l'IA ne bypass jamais la
+validation Zod de `schemaEntree`.
+
+**Ce n'est pas un substitut à la recherche dans un catalogue.** Quand l'aliment est connu
+(CIQUAL, Open Food Facts — phase 2), la base donne un chiffre exact. L'IA n'intervient que
+pour les plats maison qu'aucune base ne référencera jamais. `entree.source` porte une
+sixième valeur, `'estimation_ia'`, pour que l'interface puisse le dire — même principe
+d'honnêteté que `depense_issue_du_reel` : une estimation reste une estimation, jamais
+présentée comme une valeur sûre.
+
+`lib/ia/analyse.ts` contient la partie pure (schéma, extraction de la réponse) et
+`lib/ia/estimation.ts` l'appel réseau. Séparation obligatoire : `estimation.ts` importe
+`server-only` via `env.ts`, qui interrompt **tout** import, même transitif, hors d'un
+contexte serveur Next.js — y compris depuis Vitest. Sans cette séparation, impossible de
+tester `analyserReponseEstimation`. Même principe que la séparation `lib/calcul/` /
+`lib/supabase/`.
+
+Une estimation ratée ne bloque jamais l'écran : repli silencieux sur la saisie manuelle,
+même logique que la spec §7 pour Open Food Facts indisponible. Délai borné à 15 s.
+
+`ANTHROPIC_API_KEY` suit le même filet de sécurité que les clés Supabase après l'incident du
+même jour : nettoyage des caractères hors ASCII et vérification de la forme
+(`sk-ant-...`), pas seulement « non vide ».
+
 ## Points ouverts
 
 - **Objectifs cycliques** (objectif différent le week-end, brief §4.2) : absents du schéma

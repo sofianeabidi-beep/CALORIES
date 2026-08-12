@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ChangeEventHandler, ReactNode } from 'react';
 
 /**
  * Primitives d'interface.
@@ -104,6 +104,8 @@ export function Champ({
   libelle,
   type = 'text',
   defaultValue,
+  value,
+  onChange,
   required = false,
   erreurs,
   ...reste
@@ -112,6 +114,12 @@ export function Champ({
   libelle: string;
   type?: string;
   defaultValue?: string | number | undefined;
+  // Champ contrôlé : pour préremplir depuis un état (ex. une estimation
+  // IA) tout en restant modifiable. Ne jamais fournir en même temps que
+  // `defaultValue` — React avertit si un champ change de statut en
+  // cours de vie.
+  value?: string | number | undefined;
+  onChange?: ChangeEventHandler<HTMLInputElement> | undefined;
   required?: boolean;
   // `| undefined` explicite : sous `exactOptionalPropertyTypes`, un prop
   // simplement optionnel refuse qu'on lui passe `undefined`, ce que fait
@@ -137,6 +145,8 @@ export function Champ({
         name={nom}
         type={type}
         defaultValue={defaultValue}
+        value={value}
+        onChange={onChange}
         required={required}
         aria-invalid={enErreur}
         aria-describedby={enErreur ? idErreur : undefined}

@@ -45,7 +45,13 @@ export type ModeJoursManquants = 'neutre' | 'estime' | 'strict';
 export type StatutJournee = 'renseigne' | 'estime' | 'manquant';
 export type TypeProgramme = 'deficit' | 'surplus' | 'maintien';
 export type Repas = 'petit_dejeuner' | 'dejeuner' | 'diner' | 'collation';
-export type SourceEntree = 'off' | 'ciqual' | 'utilisateur' | 'recette' | 'rapide';
+export type SourceEntree =
+  | 'off'
+  | 'ciqual'
+  | 'utilisateur'
+  | 'recette'
+  | 'rapide'
+  | 'estimation_ia';
 
 export type LigneProfil = {
   user_id: string;

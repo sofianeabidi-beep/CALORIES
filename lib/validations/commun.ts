@@ -33,9 +33,10 @@ export const repas = z.enum(['petit_dejeuner', 'dejeuner', 'diner', 'collation']
   message: 'Repas inconnu.',
 });
 
-export const sourceEntree = z.enum(['off', 'ciqual', 'utilisateur', 'recette', 'rapide'], {
-  message: 'Source d’entrée inconnue.',
-});
+export const sourceEntree = z.enum(
+  ['off', 'ciqual', 'utilisateur', 'recette', 'rapide', 'estimation_ia'],
+  { message: 'Source d’entrée inconnue.' },
+);
 
 /**
  * Bornes de poids. Volontairement larges : le rôle de ce schéma est
