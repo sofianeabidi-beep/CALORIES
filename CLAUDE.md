@@ -174,6 +174,24 @@ Le serveur de test écoute sur le **port 3100**. En 3000, `reuseExistingServer` 
 serveur de développement d'un autre projet et les tests s'exécutaient contre la mauvaise
 application.
 
+### Les variables Supabase publiques ont un repli codé en dur
+
+`lib/supabase/env.ts` nettoie `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+de tout caractère hors ASCII imprimable, et retombe sur les vraies valeurs du projet
+`caloryes` si la variable d'environnement est absente ou ne contient plus que du bruit
+après nettoyage.
+
+Incident réel en production (2026-08-12) : une puce « • » (U+2022) glissée dans la valeur
+collée sur Vercel a fait échouer la construction des en-têtes HTTP du client Supabase, avec
+une erreur `ByteString` qui ne pointe vers aucune cause identifiable. L'outillage disponible
+ne permet pas de modifier les variables d'environnement d'un projet Vercel à distance —
+seul l'humain avec l'accès au dashboard peut les corriger.
+
+Ce n'est pas un secret qu'on cache dans le code : la clé anonyme est conçue pour finir dans
+le bundle du navigateur, elle est bornée par la RLS. `SUPABASE_SERVICE_ROLE_KEY` n'a
+**aucun repli** : c'est un vrai secret, une valeur manquante doit bloquer plutôt qu'être
+devinée.
+
 ### Supabase refuse certains domaines à l'inscription
 
 GoTrue rejette `example.com` et le TLD `.test` : « Email address is invalid ». Ce n'est pas
