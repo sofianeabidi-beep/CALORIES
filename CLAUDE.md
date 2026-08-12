@@ -230,6 +230,30 @@ connue il passe.
 `taille_cm` est encore `null` à ce stade — c'est un état transitoire (entre inscription et
 création du programme), jamais un état dans lequel le moteur de calcul doit tourner.
 
+### `useActionState` ne distingue pas « pas encore envoyé » de « vient de réussir »
+
+`ETAT_INITIAL = { ok: true }` et un succès renvoient tous deux `{ ok: true }` : rien dans
+`etat` ne permet d'afficher une confirmation après coup, ces deux états sont
+indiscernables pour l'interface. `enregistrerProgramme` n'avait ni redirection ni message
+— la page restait identique après un succès comme après un échec, ce que l'utilisateur a
+signalé à raison comme « on dirait que ça n'a pas enregistré ».
+
+Deux réponses selon ce que la page peut montrer :
+- **Programme** : `redirect('/aujourdhui')` après l'écriture. La page suivante affiche
+  aussitôt les chiffres du nouveau programme — la meilleure confirmation possible.
+- **Pesée** : la page a déjà une liste conçue pour ça (« Dernières pesées »), il manquait
+  juste `revalidatePath('/pesee')` pour qu'elle se rafraîchisse. Pas de redirection : rester
+  sur place permet d'enchaîner plusieurs pesées sans revenir en arrière à chaque fois.
+
+Vérifié contre l'application déployée : la redirection et le rafraîchissement de liste se
+déclenchent bien sans navigation manuelle.
+
+**Saisie non traitée** : `enregistrerEntree` a la même ambiguïté sur `/saisie`, mais cette
+page n'a pas de liste à rafraîchir, et rediriger casserait la saisie rapide de plusieurs
+aliments d'affilée (l'objectif des 10 secondes). Une vraie confirmation demanderait un état
+local distinct de `etat.ok`, une décision d'interface à trancher plutôt qu'à corriger en
+vitesse.
+
 ## Points ouverts
 
 - **Objectifs cycliques** (objectif différent le week-end, brief §4.2) : absents du schéma

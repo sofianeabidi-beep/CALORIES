@@ -198,5 +198,10 @@ export async function enregistrerProgramme(donnees: unknown): Promise<Resultat> 
   revalidatePath('/aujourdhui');
   revalidatePath('/reglages');
 
-  return { ok: true };
+  // Sans redirection, la page reste identique après un succès comme
+  // après un échec : `etat.ok` vaut `true` avant tout envoi et après un
+  // succès, rien ne distingue les deux aux yeux de l'utilisateur.
+  // Aujourd'hui affiche immédiatement les chiffres du nouveau
+  // programme — la meilleure confirmation qu'il a bien été enregistré.
+  redirect('/aujourdhui');
 }

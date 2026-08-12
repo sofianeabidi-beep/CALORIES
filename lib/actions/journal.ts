@@ -205,6 +205,10 @@ export async function enregistrerPesee(donnees: unknown): Promise<Resultat> {
   await recalculerDepuis({ dateImpactee: saisie.date, aujourdhui: aujourdhuiIso() });
   revalidatePath('/aujourdhui');
   revalidatePath('/bilan');
+  // Sans ça, la liste « Dernières pesées » ne se rafraîchissait pas :
+  // la seule preuve visible qu'un enregistrement a marché sur cette
+  // page, puisque `etat.ok` vaut déjà `true` avant tout envoi.
+  revalidatePath('/pesee');
 
   return { ok: true };
 }
