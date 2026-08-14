@@ -1,4 +1,8 @@
+'use client';
+
+import { useState } from 'react';
 import type { PeseeLissee } from '@/lib/calcul';
+import { formaterDate } from '@/lib/dates-app';
 
 const LARGEUR = 600;
 const HAUTEUR = 220;
@@ -17,8 +21,16 @@ const uneDecimale = new Intl.NumberFormat('fr-FR', {
  * un poids ne se lit pas depuis l'origine, c'est la variation qui compte.
  * Pas de code couleur bonne/mauvaise tendance, cohérent avec le reste de
  * l'application : une seule teinte neutre.
+ *
+ * Chaque pesée porte un point survolable/tapable (souris ou tactile —
+ * l'appli s'utilise surtout au doigt) qui affiche poids et date exacts.
+ * Le cercle visible reste petit ; un second cercle transparent, plus
+ * grand, capte l'interaction pour rester une cible tactile confortable
+ * sans épaissir le tracé.
  */
 export function GraphiquePoids({ pesees }: { pesees: readonly PeseeLissee[] }) {
+  const [survole, setSurvole] = useState<number | null>(null);
+
   const points = pesees.filter(
     (p): p is PeseeLissee & { moyenneMobile7jKg: number } =>
       !p.aberrante && p.moyenneMobile7jKg !== null,
@@ -56,6 +68,14 @@ export function GraphiquePoids({ pesees }: { pesees: readonly PeseeLissee[] }) {
   /* c8 ignore next -- longueur >= 2 vérifiée juste au-dessus, garde de typage */
   if (premier === undefined || dernier === undefined) return null;
 
+  const pointSurvole = survole === null ? null : points[survole];
+  const ancrageEtiquette = (i: number): 'start' | 'middle' | 'end' => {
+    const px = x(i);
+    if (px < 60) return 'start';
+    if (px > LARGEUR - 60) return 'end';
+    return 'middle';
+  };
+
   return (
     <div>
       <svg
@@ -92,18 +112,83 @@ export function GraphiquePoids({ pesees }: { pesees: readonly PeseeLissee[] }) {
           vectorEffect="non-scaling-stroke"
         />
 
-        {/* Point de départ et d'arrivée : les deux seules valeurs
-            étiquetées directement, le reste se lit sur la forme. */}
-        {[premier, dernier].map((p, i) => (
-          <circle
-            key={i}
-            cx={x(i === 0 ? 0 : points.length - 1)}
-            cy={y(p.moyenneMobile7jKg)}
-            r={4}
-            style={{ fill: 'var(--couleur-deficit)', stroke: 'var(--couleur-surface)' }}
-            strokeWidth={2}
-          />
+        {/* Un point par pesée : visible en petit, tapable/survolable en
+            plus grand via le cercle transparent superposé. */}
+        {points.map((p, i) => (
+          <g key={p.date}>
+            <circle
+              cx={x(i)}
+              cy={y(p.moyenneMobile7jKg)}
+              r={survole === i ? 4.5 : 3}
+              style={{ fill: 'var(--couleur-deficit)', stroke: 'var(--couleur-surface)' }}
+              strokeWidth={1.5}
+            />
+            <circle
+              cx={x(i)}
+              cy={y(p.moyenneMobile7jKg)}
+              r={22}
+              fill="transparent"
+              tabIndex={0}
+              role="button"
+              aria-label={`${uneDecimale.format(p.moyenneMobile7jKg)} kg le ${formaterDate(p.date, { day: 'numeric', month: 'short' })}`}
+              onMouseEnter={() => {
+                setSurvole(i);
+              }}
+              onMouseLeave={() => {
+                setSurvole(null);
+              }}
+              onFocus={() => {
+                setSurvole(i);
+              }}
+              onBlur={() => {
+                setSurvole(null);
+              }}
+              onClick={() => {
+                setSurvole((actuel) => (actuel === i ? null : i));
+              }}
+            />
+          </g>
         ))}
+
+        {pointSurvole !== undefined && pointSurvole !== null && survole !== null && (
+          <g>
+            {(() => {
+              const py = y(pointSurvole.moyenneMobile7jKg);
+              // Pas assez de place au-dessus (point proche du haut du
+              // cadre) : l'étiquette passe sous le point plutôt que de se
+              // faire couper par le bord du viewBox.
+              const enDessous = py - 34 < 0;
+              const rectY = enDessous ? py + 12 : py - 34;
+              const texteY = enDessous ? py + 27 : py - 19;
+              const ancrage = ancrageEtiquette(survole);
+              return (
+                <>
+                  <rect
+                    x={
+                      ancrage === 'start' ? x(survole) : ancrage === 'end' ? x(survole) - 116 : x(survole) - 58
+                    }
+                    y={rectY}
+                    width={116}
+                    height={22}
+                    rx={5}
+                    style={{ fill: 'var(--couleur-graphite)' }}
+                  />
+                  <text
+                    x={x(survole)}
+                    y={texteY}
+                    textAnchor={ancrage}
+                    dx={ancrage === 'start' ? 6 : ancrage === 'end' ? -6 : 0}
+                    className="text-xs"
+                    style={{ fill: 'var(--couleur-papier)' }}
+                  >
+                    {uneDecimale.format(pointSurvole.moyenneMobile7jKg)} kg —{' '}
+                    {formaterDate(pointSurvole.date, { day: 'numeric', month: 'short' })}
+                  </text>
+                </>
+              );
+            })()}
+          </g>
+        )}
 
         <text
           x={x(0)}

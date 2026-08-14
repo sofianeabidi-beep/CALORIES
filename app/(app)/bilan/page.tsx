@@ -249,39 +249,45 @@ export default async function Bilan() {
       )}
 
       <Carte className="entree-douce" style={delaiEntree(6)}>
+        <Libelle>Historique</Libelle>
+        <p className="mt-2 text-sm text-ardoise">
+          Déficit ou surplus jour par jour, avec le détail de ce que vous avez mangé.
+        </p>
+        <Link href="/bilan/historique" className="mt-2 inline-block text-sm text-deficit">
+          Voir le détail jour par jour →
+        </Link>
+      </Carte>
+
+      <Carte className="entree-douce" style={delaiEntree(7)}>
         <Libelle>Dernières pesées</Libelle>
         {pesees.length === 0 ? (
           <p className="mt-2 text-sm text-ardoise">Aucune pesée enregistrée.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-2">
+          <div className="mt-2 grid grid-cols-3 gap-2">
             {pesees
-              .slice(-10)
+              .slice(-12)
               .reverse()
               .map((pesee) => (
-                <li key={pesee.date} className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm text-ardoise">
+                <div
+                  key={pesee.date}
+                  className="rounded-lg border border-trait px-2 py-1.5 text-center"
+                >
+                  <p
+                    className={`chiffre text-sm ${
+                      pesee.aberrante ? 'text-signal' : 'text-graphite'
+                    }`}
+                  >
+                    {uneDecimale.format(pesee.poidsKg)} kg
+                  </p>
+                  <p className="text-xs text-ardoise">
                     {formaterDate(pesee.date, { day: 'numeric', month: 'short' })}
-                  </span>
-                  <span className="flex items-baseline gap-3">
-                    <span
-                      className={`chiffre text-sm ${
-                        pesee.aberrante ? 'text-signal' : 'text-graphite'
-                      }`}
-                    >
-                      {uneDecimale.format(pesee.poidsKg)} kg
-                    </span>
-                    <span className="chiffre w-20 text-right text-sm text-ardoise">
-                      {pesee.moyenneMobile7jKg === null
-                        ? '—'
-                        : `moy. ${uneDecimale.format(pesee.moyenneMobile7jKg)}`}
-                    </span>
-                  </span>
-                </li>
+                  </p>
+                </div>
               ))}
-          </ul>
+          </div>
         )}
 
-        {pesees.slice(-10).some((p) => p.aberrante) && (
+        {pesees.slice(-12).some((p) => p.aberrante) && (
           <p className="mt-3 border-t border-trait pt-2 text-sm text-ardoise">
             Les valeurs en rouge s’écartent de plus de 2 kg de votre moyenne. Elles sont
             conservées mais exclues du calcul, le temps que vous les confirmiez.

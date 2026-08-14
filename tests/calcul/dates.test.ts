@@ -5,6 +5,7 @@ import {
   differenceJours,
   estDansPlage,
   estDateIso,
+  lundiDeLaSemaine,
   nombreJoursInclus,
   plageDates,
 } from '@/lib/calcul/dates';
@@ -144,5 +145,33 @@ describe('calculerAge', () => {
 
   it('refuse une référence antérieure à la naissance', () => {
     expect(() => calculerAge('2026-06-15', '2026-06-14')).toThrow(RangeError);
+  });
+});
+
+describe('lundiDeLaSemaine', () => {
+  // 2026-08-10 est un lundi (vérifié contre le calendrier réel).
+  it('renvoie la date elle-même quand c’est déjà un lundi', () => {
+    expect(lundiDeLaSemaine('2026-08-10')).toBe('2026-08-10');
+  });
+
+  it('recule jusqu’au lundi pour un jour de semaine', () => {
+    expect(lundiDeLaSemaine('2026-08-15')).toBe('2026-08-10'); // samedi
+  });
+
+  it('recule jusqu’au lundi pour un dimanche, fin de la même semaine', () => {
+    expect(lundiDeLaSemaine('2026-08-16')).toBe('2026-08-10'); // dimanche
+  });
+
+  it('recule jusqu’au lundi précédent pour un dimanche en tout début de semaine suivante', () => {
+    expect(lundiDeLaSemaine('2026-08-09')).toBe('2026-08-03'); // dimanche
+  });
+
+  it('avance au lundi suivant', () => {
+    expect(lundiDeLaSemaine('2026-08-17')).toBe('2026-08-17'); // lundi
+  });
+
+  it('franchit un mois', () => {
+    // 2026-08-31 est aussi un lundi (21 jours après le 10 août).
+    expect(lundiDeLaSemaine('2026-09-01')).toBe('2026-08-31'); // mardi
   });
 });

@@ -82,6 +82,20 @@ export function estDansPlage(date: DateIso, debut: DateIso, fin: DateIso): boole
 }
 
 /**
+ * Lundi de la semaine contenant `date`. Sert de clé de regroupement pour
+ * la planification hebdomadaire — une semaine commence toujours un lundi
+ * (convention française), quel que soit le jour où l'utilisateur génère
+ * son plan.
+ */
+export function lundiDeLaSemaine(date: DateIso): DateIso {
+  // `getUTCDay()` : 0 = dimanche … 6 = samedi. Décalage pour que lundi
+  // vaille 0 et dimanche 6, afin de reculer jusqu'au lundi précédent.
+  const jourSemaine = new Date(versHorodatage(date)).getUTCDay();
+  const decalage = (jourSemaine + 6) % 7;
+  return ajouterJours(date, -decalage);
+}
+
+/**
  * Âge en années révolues à la date de référence.
  *
  * Sert au métabolisme de base **et** au contrôle des 18 ans : il ne peut
