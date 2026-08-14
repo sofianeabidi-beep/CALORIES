@@ -31,7 +31,7 @@ export default async function Reglages() {
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6">
-      <h1 className="text-xl font-light text-graphite">Réglages</h1>
+      <h1 className="font-voice text-xl text-graphite">Réglages</h1>
 
       <Carte>
         <Libelle>Compte</Libelle>

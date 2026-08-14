@@ -27,7 +27,7 @@ export default function Connexion() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 py-8">
       <header>
-        <Link href="/" className="text-2xl font-light text-graphite">
+        <Link href="/" className="font-voice text-2xl text-graphite">
           Symbio
         </Link>
         <p className="mt-1 text-sm text-ardoise">Content de vous revoir.</p>

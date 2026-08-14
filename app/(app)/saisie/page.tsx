@@ -12,7 +12,7 @@ import { Carte } from '@/components/ui/primitives';
 export default function Saisie() {
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-light text-graphite">Ajouter un repas</h1>
+      <h1 className="font-voice mb-4 text-xl text-graphite">Ajouter un repas</h1>
 
       <Suspense
         fallback={

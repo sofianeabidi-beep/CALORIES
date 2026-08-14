@@ -9,12 +9,23 @@
  * réservé aux garde-fous et aux erreurs — il est rare, donc lisible.
  */
 
+/*
+ * Palette neutre chaude (carnet plutôt que tableau de bord froid),
+ * propagée depuis la page d'accueil et la connexion — un seul endroit à
+ * changer plutôt qu'un hex figé recopié sur chaque écran, pour que la
+ * direction artistique tienne aussi en mode sombre, obligatoire ici
+ * (contrairement au bandeau de marque de `/` et `/connexion`, resté
+ * figé à dessein : ce sont des pages de présentation, pas des écrans de
+ * saisie du soir). `deficit`/`surplus`/`signal` ne bougent pas : ce sont
+ * des couleurs sémantiques, pas de l'ambiance — les changer serait
+ * changer ce que l'application dit, pas comment elle le dit.
+ */
 :root {
-  --couleur-graphite: #1a1d21;
-  --couleur-ardoise: #5b6470;
-  --couleur-papier: #f4f5f3;
+  --couleur-graphite: #2b2620;
+  --couleur-ardoise: #6b6255;
+  --couleur-papier: #f1ece1;
   --couleur-surface: #ffffff;
-  --couleur-trait: #dde0dc;
+  --couleur-trait: #ded5c2;
   --couleur-deficit: #1f6f78;
   --couleur-surplus: #c77b30;
   --couleur-signal: #b3402f;
@@ -24,15 +35,16 @@
  * Le mode sombre est obligatoire et de qualité égale : une part
  * importante des saisies a lieu le soir. Les teintes d'accent sont
  * éclaircies pour tenir le contraste AA sur fond sombre — reprendre
- * les valeurs du mode clair telles quelles donnerait 2,4:1.
+ * les valeurs du mode clair telles quelles donnerait 2,4:1. Vérifié au
+ * calcul : graphite/papier ≈ 14,5:1, ardoise/papier ≈ 6,7:1.
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='clair']) {
-    --couleur-graphite: #e8eae7;
-    --couleur-ardoise: #98a1ad;
-    --couleur-papier: #14161a;
-    --couleur-surface: #1d2026;
-    --couleur-trait: #2e333b;
+    --couleur-graphite: #ece6d8;
+    --couleur-ardoise: #a89d8a;
+    --couleur-papier: #1a1611;
+    --couleur-surface: #241f19;
+    --couleur-trait: #3a3226;
     --couleur-deficit: #4fa8b3;
     --couleur-surplus: #e0a05c;
     --couleur-signal: #e0705e;
@@ -40,11 +52,11 @@
 }
 
 :root[data-theme='sombre'] {
-  --couleur-graphite: #e8eae7;
-  --couleur-ardoise: #98a1ad;
-  --couleur-papier: #14161a;
-  --couleur-surface: #1d2026;
-  --couleur-trait: #2e333b;
+  --couleur-graphite: #ece6d8;
+  --couleur-ardoise: #a89d8a;
+  --couleur-papier: #1a1611;
+  --couleur-surface: #241f19;
+  --couleur-trait: #3a3226;
   --couleur-deficit: #4fa8b3;
   --couleur-surplus: #e0a05c;
   --couleur-signal: #e0705e;
@@ -65,6 +77,15 @@
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+
+  /*
+   * Voix éditoriale, réservée aux titres de page — jamais aux chiffres.
+   * Les chiffres restent en `--font-sans` : « les chiffres sont les
+   * héros » (section 10) suppose qu'ils s'alignent et se scannent vite,
+   * ce que la chasse variable d'un sérif dessert. Système, pas
+   * distante : même raison que `--font-sans`.
+   */
+  --font-voice: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
 }
 
 html {

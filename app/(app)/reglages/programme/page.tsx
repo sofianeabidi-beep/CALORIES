@@ -83,7 +83,7 @@ export default function Programme() {
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <header className="mb-4">
-        <h1 className="text-xl font-light text-graphite">Programme</h1>
+        <h1 className="font-voice text-xl text-graphite">Programme</h1>
         <p className="mt-1 text-sm text-ardoise">
           Les cumuls se calculent par programme, jamais depuis l’inscription. En créer un
           nouveau clôt le précédent et repart de zéro.

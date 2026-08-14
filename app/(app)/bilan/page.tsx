@@ -80,7 +80,7 @@ export default async function Bilan() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6">
       <header>
-        <h1 className="text-xl font-light text-graphite">Bilan</h1>
+        <h1 className="font-voice text-xl text-graphite">Bilan</h1>
         <p className="mt-1 text-sm text-ardoise">
           Depuis le {formaterDate(vue.programme.date_debut, { dateStyle: 'long' })}.
         </p>

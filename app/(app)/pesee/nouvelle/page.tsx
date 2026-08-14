@@ -10,7 +10,7 @@ export default async function NouvellePesee() {
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-xl font-light text-graphite">Je me pèse</h1>
+      <h1 className="font-voice mb-4 text-xl text-graphite">Je me pèse</h1>
 
       {/* Prérempli avec la dernière valeur : d'un jour à l'autre le
           poids bouge de quelques centaines de grammes, taper trois

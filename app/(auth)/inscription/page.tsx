@@ -36,7 +36,7 @@ export default function Inscription() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
       <header>
-        <h1 className="text-2xl font-light text-graphite">Créer un compte</h1>
+        <h1 className="font-voice text-2xl text-graphite">Créer un compte</h1>
         <p className="mt-1 text-sm text-ardoise">
           Ces informations servent à estimer votre dépense énergétique de départ.
           L’application la corrigera ensuite à partir de vos données réelles.
