@@ -14,3 +14,4 @@ export * from './commun';
 export * from './profil';
 export * from './programme';
 export * from './journal';
+export * from './planification';

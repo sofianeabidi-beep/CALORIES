@@ -144,6 +144,20 @@ export type LignePesee = {
   updated_at: string;
 };
 
+export type LignePlanificationSemaine = {
+  id: string;
+  user_id: string;
+  semaine_debut: string;
+  nb_repas_jour: number;
+  objectif_kcal_jour: number;
+  contrainte_temps: 'rapide' | 'elabore';
+  plan: Json;
+  liste_courses: Json;
+  courses_cochees: Json;
+  created_at: string;
+  updated_at: string;
+};
+
 export type LigneInstantaneCalcul = {
   id: string;
   user_id: string;
@@ -197,6 +211,10 @@ export type Database = {
         'journee_id' | 'libelle' | 'repas' | 'quantite' | 'kcal' | 'source'
       >;
       pesee: Table<LignePesee, 'date' | 'poids_kg'>;
+      planification_semaine: Table<
+        LignePlanificationSemaine,
+        'semaine_debut' | 'nb_repas_jour' | 'objectif_kcal_jour' | 'plan' | 'liste_courses'
+      >;
       instantane_calcul: Table<
         LigneInstantaneCalcul,
         | 'programme_id'

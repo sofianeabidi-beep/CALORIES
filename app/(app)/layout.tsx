@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 const ONGLETS = [
   { href: '/aujourdhui', texte: 'Aujourd’hui' },
   { href: '/bilan', texte: 'Bilan' },
+  { href: '/planification', texte: 'Planification' },
   { href: '/reglages', texte: 'Réglages' },
 ] as const;
 
