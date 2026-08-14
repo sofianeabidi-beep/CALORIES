@@ -43,6 +43,19 @@ export function schemaProfil(dateReference: string) {
 export type SaisieProfil = z.infer<typeof schemaProfilBase>;
 
 /**
+ * Prénom, recueilli depuis Réglages — jamais à l'inscription. Une chaîne
+ * vide efface le prénom plutôt que d'être rejetée : c'est le seul moyen
+ * de revenir au repli sur l'email une fois un prénom saisi.
+ */
+export const schemaPrenom = z.object({
+  prenom: z
+    .string()
+    .trim()
+    .max(60, { message: 'Le prénom est limité à 60 caractères.' })
+    .transform((valeur) => (valeur.length === 0 ? null : valeur)),
+});
+
+/**
  * Consentements recueillis à l'inscription.
  *
  * Le consentement au traitement de données de santé est **distinct** de

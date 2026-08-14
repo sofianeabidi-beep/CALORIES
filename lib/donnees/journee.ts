@@ -14,11 +14,13 @@ import type { LigneEntree, LigneProfil, LigneProgramme } from '@/lib/supabase/ty
 
 export interface VueJournee {
   readonly date: DateIso;
+  readonly email: string | null;
   readonly profil: LigneProfil;
   readonly programme: LigneProgramme;
   readonly entrees: readonly LigneEntree[];
   readonly bilan: Bilan;
   readonly objectifKcal: number | null;
+  readonly nombrePesees: number;
 }
 
 /**
@@ -118,10 +120,12 @@ export async function lireJournee(date: DateIso): Promise<VueJournee | null> {
 
   return {
     date,
+    email: user.email ?? null,
     profil: profilLigne,
     programme: programmeLigne,
     entrees: entreesReponse.data ?? [],
     bilan: calculerBilan({ date, profil, programme, apports, pesees }),
     objectifKcal: programmeLigne.objectif_kcal,
+    nombrePesees: peseesReponse.data?.length ?? 0,
   };
 }

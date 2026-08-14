@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { seDeconnecter } from '@/lib/actions/compte';
 import { creerClientServeur } from '@/lib/supabase/server';
-import { Carte, Libelle } from '@/components/ui/primitives';
+import { Bouton, Carte, Libelle } from '@/components/ui/primitives';
+import { FormulairePrenom } from '@/components/reglages/formulaire-prenom';
 
 const MODES = {
   neutre: 'Neutre — le jour est exclu du cumul et compté comme non renseigné',
@@ -38,6 +39,14 @@ export default async function Reglages() {
       </Carte>
 
       <Carte>
+        <Libelle>Prénom</Libelle>
+        <p className="mt-2 text-sm text-ardoise">
+          Affiché en haut d’Aujourd’hui. Laissez vide pour revenir à votre adresse électronique.
+        </p>
+        <FormulairePrenom prenomActuel={profil?.prenom ?? null} />
+      </Carte>
+
+      <Carte>
         <Libelle>Programme actif</Libelle>
         {programme === null ? (
           <p className="mt-2 text-sm text-ardoise">Aucun programme en cours.</p>
@@ -49,7 +58,7 @@ export default async function Reglages() {
         )}
         <Link
           href="/reglages/programme"
-          className="mt-3 flex min-h-11 items-center justify-center rounded-lg border border-trait text-sm text-graphite"
+          className="mt-3 flex min-h-11 items-center justify-center rounded-lg border border-trait text-sm text-graphite transition duration-150 hover:border-ardoise active:bg-trait"
         >
           {programme === null ? 'Créer un programme' : 'Changer de programme'}
         </Link>
@@ -88,16 +97,13 @@ export default async function Reglages() {
       </Carte>
 
       <form action={seDeconnecter}>
-        <button
-          type="submit"
-          className="min-h-11 w-full rounded-lg border border-trait px-4 py-3 text-base text-graphite"
-        >
+        <Bouton type="submit" variante="discret">
           Se déconnecter
-        </button>
+        </Bouton>
       </form>
 
       <p className="pb-4 text-center text-xs text-ardoise">
-        Caloryes mesure et restitue. Il ne donne aucun conseil médical ni nutritionnel.
+        Symbio mesure et restitue. Il ne donne aucun conseil médical ni nutritionnel.
       </p>
     </main>
   );

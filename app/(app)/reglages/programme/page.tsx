@@ -1,32 +1,82 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { enregistrerProgramme } from '@/lib/actions/compte';
 import type { Resultat } from '@/lib/actions/journal';
 import { aujourdhuiIso } from '@/lib/dates-app';
+import { differenceJours, verifierAllure } from '@/lib/calcul';
 import { Alerte, Bouton, Carte, Champ, Selecteur } from '@/components/ui/primitives';
 
 const ETAT_INITIAL: Resultat = { ok: true };
+
+const deuxDecimales = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 function nombreOuNull(valeur: FormDataEntryValue | null): number | null {
   if (valeur === null || valeur === '') return null;
   return Number(valeur);
 }
 
-async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat> {
-  return enregistrerProgramme({
-    libelle: donnees.get('libelle') || undefined,
-    type: donnees.get('type'),
-    dateDebut: donnees.get('dateDebut'),
-    tailleCm: Number(donnees.get('tailleCm')),
-    poidsDepartKg: Number(donnees.get('poidsDepartKg')),
-    poidsCibleKg: nombreOuNull(donnees.get('poidsCibleKg')),
-    allureCibleKgSemaine: nombreOuNull(donnees.get('allureCibleKgSemaine')),
-    objectifKcal: nombreOuNull(donnees.get('objectifKcal')),
-  });
+/**
+ * Rythme nécessaire pour atteindre `poidsCibleKg` à `dateCible`, à la
+ * place d'un kg/semaine saisi à la main : personne ne sait
+ * spontanément ce que représente « -0,4 kg/semaine et négatif pour
+ * perdre », tout le monde sait ce que représente une date.
+ *
+ * `null` tant qu'il manque poids de départ, poids cible ou date cible,
+ * ou si la date cible ne suit pas la date de début — rien à calculer,
+ * pas une valeur à deviner.
+ */
+function calculerAllure(entree: {
+  poidsDepartKg: number | null;
+  poidsCibleKg: number | null;
+  dateDebut: string;
+  dateCible: string;
+}): number | null {
+  const { poidsDepartKg, poidsCibleKg, dateDebut, dateCible } = entree;
+  if (poidsDepartKg === null || poidsCibleKg === null || dateCible === '') return null;
+  const jours = differenceJours(dateDebut, dateCible);
+  if (jours <= 0) return null;
+  return ((poidsCibleKg - poidsDepartKg) / jours) * 7;
 }
 
 export default function Programme() {
+  const [dateDebut, setDateDebut] = useState(aujourdhuiIso());
+  const [poidsDepartKg, setPoidsDepartKg] = useState('');
+  const [poidsCibleKg, setPoidsCibleKg] = useState('');
+  const [dateCible, setDateCible] = useState('');
+
+  const poidsDepartKgNum = poidsDepartKg === '' ? null : Number(poidsDepartKg);
+  const poidsCibleKgNum = poidsCibleKg === '' ? null : Number(poidsCibleKg);
+  const allureCalculee = calculerAllure({
+    poidsDepartKg: poidsDepartKgNum,
+    poidsCibleKg: poidsCibleKgNum,
+    dateDebut,
+    dateCible,
+  });
+  const controleAllure =
+    allureCalculee === null
+      ? null
+      : verifierAllure({
+          allureKgSemaine: allureCalculee,
+          poidsActuelKg: poidsDepartKgNum ?? 0,
+        });
+
+  async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat> {
+    return enregistrerProgramme({
+      libelle: donnees.get('libelle') || undefined,
+      type: donnees.get('type'),
+      dateDebut: donnees.get('dateDebut'),
+      tailleCm: Number(donnees.get('tailleCm')),
+      poidsDepartKg: Number(donnees.get('poidsDepartKg')),
+      poidsCibleKg: nombreOuNull(donnees.get('poidsCibleKg')),
+      allureCibleKgSemaine: allureCalculee,
+      objectifKcal: nombreOuNull(donnees.get('objectifKcal')),
+    });
+  }
+
   const [etat, envoyer, enCours] = useActionState(action, ETAT_INITIAL);
   const champs = etat.ok ? undefined : etat.champs;
 
@@ -41,7 +91,7 @@ export default function Programme() {
       </header>
 
       <Carte>
-        <form action={envoyer} className="flex flex-col gap-4">
+        <form action={envoyer} className="flex flex-col gap-4" aria-busy={enCours}>
           <Champ nom="libelle" libelle="Pseudo (facultatif)" erreurs={champs?.libelle} />
 
           <Selecteur
@@ -59,10 +109,15 @@ export default function Programme() {
             nom="dateDebut"
             libelle="Date de début"
             type="date"
-            defaultValue={aujourdhuiIso()}
+            value={dateDebut}
+            onChange={(e) => {
+              setDateDebut(e.target.value);
+            }}
             required
             erreurs={champs?.dateDebut}
           />
+
+          <div className="border-t border-trait" aria-hidden="true" />
 
           <Champ
             nom="tailleCm"
@@ -83,6 +138,10 @@ export default function Programme() {
             step="0.1"
             min="30"
             max="400"
+            value={poidsDepartKg}
+            onChange={(e) => {
+              setPoidsDepartKg(e.target.value);
+            }}
             required
             erreurs={champs?.poidsDepartKg}
           />
@@ -95,17 +154,47 @@ export default function Programme() {
             step="0.1"
             min="30"
             max="400"
+            value={poidsCibleKg}
+            onChange={(e) => {
+              setPoidsCibleKg(e.target.value);
+            }}
             erreurs={champs?.poidsCibleKg}
           />
 
+          <div className="border-t border-trait" aria-hidden="true" />
+
           <Champ
-            nom="allureCibleKgSemaine"
-            libelle="Allure visée (kg/semaine, négatif pour perdre)"
-            type="number"
-            inputMode="decimal"
-            step="0.05"
-            erreurs={champs?.allureCibleKgSemaine}
+            nom="dateCible"
+            libelle="Objectif atteint pour quand ? (facultatif)"
+            type="date"
+            min={dateDebut}
+            value={dateCible}
+            onChange={(e) => {
+              setDateCible(e.target.value);
+            }}
           />
+
+          <p className="text-sm text-ardoise">
+            {poidsCibleKgNum === null
+              ? 'Renseignez un poids cible pour calculer le rythme nécessaire.'
+              : allureCalculee === null
+                ? 'Choisissez une date de fin postérieure à la date de début.'
+                : `Cela représente un rythme de ${deuxDecimales.format(Math.abs(allureCalculee))} kg par semaine, ${
+                    allureCalculee <= 0 ? 'en perte' : 'en prise'
+                  }.`}
+          </p>
+
+          {controleAllure !== null && !controleAllure.conforme && (
+            <Alerte>
+              Ce rythme dépasse le maximum recommandé pour votre poids (
+              {deuxDecimales.format(controleAllure.allureMaxKgSemaine)} kg/semaine) — choisissez
+              une date plus éloignée.
+            </Alerte>
+          )}
+
+          {champs?.allureCibleKgSemaine !== undefined && (
+            <Alerte>{champs.allureCibleKgSemaine.join(' ')}</Alerte>
+          )}
 
           <Champ
             nom="objectifKcal"

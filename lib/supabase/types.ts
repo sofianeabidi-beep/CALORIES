@@ -55,6 +55,9 @@ export type SourceEntree =
 
 export type LigneProfil = {
   user_id: string;
+  // NULL tant que non renseigné depuis Réglages — jamais recueilli à
+  // l'inscription. L'affichage se replie sur l'email.
+  prenom: string | null;
   sexe: Sexe;
   date_naissance: string;
   // Recueillie à la création du programme, plus à l'inscription : la

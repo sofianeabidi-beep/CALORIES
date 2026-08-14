@@ -1,18 +1,51 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { lireJournee } from '@/lib/donnees/journee';
 import { aujourdhuiIso, formaterDate } from '@/lib/dates-app';
+import {
+  differenceJours,
+  evaluerStatutJour,
+  nombreJoursInclus,
+  objectifProteinesRepere,
+  repartirMacrosObjectif,
+} from '@/lib/calcul';
 import { Carte, Chiffre, Libelle } from '@/components/ui/primitives';
-import type { Repas } from '@/lib/supabase/types';
-
-const ORDRE_REPAS: readonly { cle: Repas; texte: string }[] = [
-  { cle: 'petit_dejeuner', texte: 'Petit-déjeuner' },
-  { cle: 'dejeuner', texte: 'Déjeuner' },
-  { cle: 'diner', texte: 'Dîner' },
-  { cle: 'collation', texte: 'Collation' },
-];
+import { delaiEntree } from '@/components/ui/delai-entree';
+import { CompteurAnime } from '@/components/ui/compteur-anime';
+import { AlimentationJour } from '@/components/aujourdhui/alimentation-jour';
+import { BlocSuggestion } from '@/components/aujourdhui/bloc-suggestion';
+import { EnteteProfil } from '@/components/aujourdhui/entete-profil';
+import type { StatutKcal } from '@/lib/calcul';
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+
+function fraction(consomme: number, objectif: number): string {
+  return `${entier.format(consomme)}/${entier.format(objectif)}`;
+}
+
+/**
+ * Statut du jour, toujours chiffré. La tendance sur plusieurs jours n'a
+ * pas sa place ici — elle rejoindra le Bilan, qui raisonne déjà en
+ * cumulé, plutôt que de dupliquer cette logique sur l'écran du jour.
+ */
+function texteStatutKcal(statut: StatutKcal, apportKcal: number, objectifKcal: number): string {
+  if (statut === 'depasse') {
+    return `${entier.format(apportKcal - objectifKcal)} kcal au-delà de l’objectif aujourd’hui.`;
+  }
+  if (statut === 'proche_objectif') {
+    return `Encore ${entier.format(objectifKcal - apportKcal)} kcal avant l’objectif — vous y êtes presque.`;
+  }
+  return `${entier.format(objectifKcal - apportKcal)} kcal de marge avant l’objectif.`;
+}
+
+function texteProteines(
+  statut: 'suffisant' | 'insuffisant' | 'inconnu',
+  proteinesG: number,
+  objectifProteinesG: number,
+): string | null {
+  if (statut === 'inconnu') return null;
+  const base = `Protéines : ${entier.format(proteinesG)} g sur un repère de ~${entier.format(objectifProteinesG)} g`;
+  return statut === 'insuffisant' ? `${base} pour l’instant.` : `${base} — couvert.`;
+}
 
 export default async function Aujourdhui() {
   const date = aujourdhuiIso();
@@ -22,11 +55,40 @@ export default async function Aujourdhui() {
   // installation, on l'y renvoie plutôt que d'afficher des tirets.
   if (vue === null) redirect('/reglages/programme');
 
-  const { bilan, entrees, objectifKcal, profil } = vue;
+  const { bilan, email, entrees, nombrePesees, objectifKcal, profil, programme } = vue;
   const apportDuJour = entrees.reduce((somme, e) => somme + Number(e.kcal), 0);
+  const proteinesDuJour = entrees.reduce((s, e) => s + Number(e.proteines_g ?? 0), 0);
+  const glucidesDuJour = entrees.reduce((s, e) => s + Number(e.glucides_g ?? 0), 0);
+  const lipidesDuJour = entrees.reduce((s, e) => s + Number(e.lipides_g ?? 0), 0);
 
   const cible = objectifKcal ?? Math.round(bilan.depenseRetenueKcal);
   const restant = cible - apportDuJour;
+
+  const objectifProteinesG = objectifProteinesRepere(Number(programme.poids_depart_kg));
+  const objectifsMacros = repartirMacrosObjectif({ objectifKcal: cible, objectifProteinesG });
+
+  const statutJour = evaluerStatutJour({
+    apportKcal: apportDuJour,
+    objectifKcal: cible,
+    proteinesG: proteinesDuJour,
+    objectifProteinesG,
+  });
+  const messageStatutKcal = texteStatutKcal(statutJour.statutKcal, apportDuJour, cible);
+  const messageProteines = texteProteines(statutJour.statutProteines, proteinesDuJour, objectifProteinesG);
+
+  const repasDejaPris = entrees.map((e) => ({
+    repas: e.repas,
+    libelle: e.libelle,
+    kcal: Number(e.kcal),
+  }));
+
+  // `null` sans exception : la projection se masque déjà elle-même
+  // quand les données ne la portent pas (§ Projection) — pas de date à
+  // soustraire dans ce cas.
+  const joursAvantObjectif =
+    bilan.projection.affichable && bilan.projection.dateMediane !== null
+      ? differenceJours(date, bilan.projection.dateMediane)
+      : null;
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
@@ -34,26 +96,37 @@ export default async function Aujourdhui() {
         <Libelle>{formaterDate(date)}</Libelle>
       </header>
 
-      <Carte>
-        <Libelle>{restant >= 0 ? 'Restant aujourd’hui' : 'Au-delà de l’objectif'}</Libelle>
+      <EnteteProfil
+        prenom={profil.prenom}
+        email={email}
+        joursDeRegime={nombreJoursInclus(programme.date_debut, date)}
+        nombrePesees={nombrePesees}
+        kgTheoriques={bilan.kgTheoriques}
+        joursAvantObjectif={joursAvantObjectif}
+        modeDiscret={profil.mode_discret}
+        className="entree-douce"
+        style={delaiEntree(0)}
+      />
+
+      <Carte className="mt-4 halo-deficit entree-douce" style={delaiEntree(1)}>
+        <Libelle>Restant aujourd’hui</Libelle>
         <div className="mt-2">
           {/* Mode discret : ni calories, ni objectif. Seules la
               complétude et la tendance restent visibles (spec §9). */}
           {profil.mode_discret ? (
             <Chiffre valeur="—" />
           ) : (
-            <Chiffre
-              valeur={entier.format(Math.abs(restant))}
-              unite="kcal"
+            <CompteurAnime
+              valeurs={[apportDuJour, cible]}
               ton={restant >= 0 ? 'deficit' : 'surplus'}
             />
           )}
         </div>
 
         {!profil.mode_discret && (
-          <p className="mt-3 text-sm text-ardoise">
-            <span className="chiffre">{entier.format(apportDuJour)}</span> kcal enregistrées
-            sur un objectif de <span className="chiffre">{entier.format(cible)}</span>.
+          <p className="mt-2 text-sm text-ardoise">
+            <span className="chiffre">{entier.format(Math.abs(restant))}</span> kcal{' '}
+            {restant >= 0 ? 'restant' : 'au-delà de l’objectif'}
           </p>
         )}
 
@@ -80,59 +153,73 @@ export default async function Aujourdhui() {
         </p>
       </Carte>
 
-      <section className="mt-4 flex flex-col gap-3" aria-label="Repas du jour">
-        {ORDRE_REPAS.map((repas) => {
-          const duRepas = entrees.filter((e) => e.repas === repas.cle);
-          const total = duRepas.reduce((somme, e) => somme + Number(e.kcal), 0);
+      {!profil.mode_discret && (
+        <Carte className="mt-4 entree-douce" style={delaiEntree(2)}>
+          <Libelle>Macronutriments</Libelle>
+          <div className="mt-2 grid grid-cols-3 gap-3">
+            <div>
+              <Chiffre
+                valeur={fraction(proteinesDuJour, objectifsMacros.proteinesG)}
+                unite="g"
+                taille="moyen"
+              />
+              <p className="mt-1 text-sm text-ardoise">Protéines</p>
+            </div>
+            <div>
+              <Chiffre
+                valeur={fraction(glucidesDuJour, objectifsMacros.glucidesG)}
+                unite="g"
+                taille="moyen"
+              />
+              <p className="mt-1 text-sm text-ardoise">Glucides</p>
+            </div>
+            <div>
+              <Chiffre
+                valeur={fraction(lipidesDuJour, objectifsMacros.lipidesG)}
+                unite="g"
+                taille="moyen"
+              />
+              <p className="mt-1 text-sm text-ardoise">Lipides</p>
+            </div>
+          </div>
+        </Carte>
+      )}
 
-          return (
-            <Carte key={repas.cle}>
-              <div className="flex items-baseline justify-between gap-2">
-                <Libelle>{repas.texte}</Libelle>
-                {!profil.mode_discret && duRepas.length > 0 && (
-                  <span className="chiffre text-sm text-ardoise">
-                    {entier.format(total)} kcal
-                  </span>
-                )}
-              </div>
+      {!profil.mode_discret && (
+        <Carte className="mt-4 entree-douce" style={delaiEntree(3)}>
+          <Libelle>Avis sur la journée</Libelle>
+          <div className="mt-2 flex flex-col gap-1">
+            <p className="text-sm text-ardoise">{messageStatutKcal}</p>
+            {messageProteines !== null && (
+              <p className="text-sm text-ardoise">{messageProteines}</p>
+            )}
+          </div>
+        </Carte>
+      )}
 
-              {duRepas.length === 0 ? (
-                <p className="mt-2 text-sm text-ardoise">Rien d’enregistré.</p>
-              ) : (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {duRepas.map((e) => (
-                    <li
-                      key={e.id}
-                      className="flex items-baseline justify-between gap-3 text-sm"
-                    >
-                      <span className="text-graphite">{e.libelle}</span>
-                      <span className="chiffre shrink-0 text-ardoise">
-                        {entier.format(Number(e.quantite))} {e.unite}
-                        {!profil.mode_discret && ` · ${entier.format(Number(e.kcal))} kcal`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+      <Carte className="mt-4 entree-douce" style={delaiEntree(4)}>
+        <Libelle>Alimentation du jour</Libelle>
+        <AlimentationJour
+          entrees={entrees.map((e) => ({
+            id: e.id,
+            libelle: e.libelle,
+            quantite: Number(e.quantite),
+            unite: e.unite,
+            kcal: Number(e.kcal),
+            repas: e.repas,
+          }))}
+          modeDiscret={profil.mode_discret}
+        />
+      </Carte>
 
-              <Link
-                href={{ pathname: '/saisie', query: { repas: repas.cle } }}
-                className="mt-3 flex min-h-11 items-center justify-center rounded-lg border border-trait text-sm text-graphite"
-              >
-                Ajouter
-              </Link>
-            </Carte>
-          );
-        })}
-      </section>
-
-      {/* Bouton de saisie omniprésent : c'est la fonction vitale. */}
-      <Link
-        href="/saisie"
-        className="fixed bottom-20 left-1/2 flex min-h-12 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-center rounded-xl bg-deficit px-4 text-base font-medium text-white shadow-lg"
-      >
-        Enregistrer un aliment
-      </Link>
+      {!profil.mode_discret && (
+        <BlocSuggestion
+          restantKcal={restant}
+          repasDejaPris={repasDejaPris}
+          className="mt-4 entree-douce"
+          style={delaiEntree(5)}
+        />
+      )}
     </main>
   );
 }

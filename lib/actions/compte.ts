@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { schemaConsentements, schemaProfil, schemaProgramme } from '@/lib/validations';
+import { schemaConsentements, schemaPrenom, schemaProfil, schemaProgramme } from '@/lib/validations';
 import { creerClientServeur } from '@/lib/supabase/server';
 import { aujourdhuiIso } from '@/lib/dates-app';
 import type { Resultat } from './journal';
@@ -118,6 +118,35 @@ export async function sInscrire(donnees: unknown): Promise<Resultat> {
   if (erreurProfil !== null) return { ok: false, erreur: erreurProfil.message };
 
   redirect('/reglages/programme');
+}
+
+/**
+ * Prénom affiché en tête d'Aujourd'hui. Réglage isolé, sans redirection :
+ * même raison que la Pesée (§ décisions) — l'utilisateur reste sur la
+ * page, `revalidatePath` suffit à propager la nouvelle valeur.
+ */
+export async function enregistrerPrenom(donnees: unknown): Promise<Resultat> {
+  const supabase = await creerClientServeur();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user === null) return { ok: false, erreur: 'Session expirée.' };
+
+  const analyse = schemaPrenom.safeParse(donnees);
+  if (!analyse.success) {
+    return { ok: false, erreur: 'Prénom invalide.', champs: champsDe(analyse.error) };
+  }
+
+  const { error } = await supabase
+    .from('profil')
+    .update({ prenom: analyse.data.prenom })
+    .eq('user_id', user.id);
+
+  if (error !== null) return { ok: false, erreur: error.message };
+
+  revalidatePath('/reglages');
+  revalidatePath('/aujourdhui');
+  return { ok: true };
 }
 
 export async function seDeconnecter(): Promise<void> {
