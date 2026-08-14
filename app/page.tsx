@@ -65,11 +65,11 @@ export default function Accueil() {
               Symbio
             </p>
             <h1 className="font-voice mt-4 text-3xl leading-[1.2] text-balance">
-              Le poids se joue sur des semaines. On compte comme ça.
+              Reprenez la main, sans compter chaque bouchée.
             </h1>
             <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
-              Suivez votre capital calorique sur la durée. Jamais un chiffre isolé qui vous
-              met la pression après un seul repas.
+              Une vie normale, un poids qui bouge quand même. Ce qui compte vraiment se joue
+              sur des semaines, jamais sur un seul repas.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -81,15 +81,16 @@ export default function Accueil() {
 
         <section className="px-6 py-14">
           <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
-            Pensez large
+            La vision
           </p>
           <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
-            Compter les calories sans se faire du mal.
+            Une vie d’abord. Un chiffre ensuite.
           </h2>
           <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
-            La plupart des applis vous jugent sur votre journée. Regardez la semaine, le mois
-            — le temps qu’il faut vraiment pour perdre du poids. Un excès un soir ne casse
-            rien : il se dilue dans le capital cumulé, jamais dans une alerte rouge.
+            Vous n’avez pas à choisir entre vivre normalement et perdre du poids. La plupart
+            des applis vous jugent sur votre journée ; Symbio regarde votre semaine, votre
+            mois — jamais votre dîner d’hier soir. Un excès ne casse rien, il se fond dans le
+            temps long. C’est le temps long qui compte, pas l’instant.
           </p>
         </section>
 
@@ -120,24 +121,17 @@ export default function Accueil() {
 
         <section className="px-6 py-14">
           <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
-            Notre promesse
+            Ce qui ne changera jamais
           </p>
-          <ul className="mt-4 flex flex-col gap-4">
-            {[
-              'Aucun chiffre cumulé ne s’affiche sans dire sur combien de jours il porte.',
-              'La dépense énergétique se recalcule sur vos données réelles, pas seulement une formule de départ.',
-              'Zéro classement, zéro comparaison avec d’autres utilisateurs — vos chiffres restent les vôtres.',
-            ].map((texte) => (
-              <li key={texte} className="flex items-start gap-3 text-base" style={{ color: ENCRE }}>
-                <span
-                  aria-hidden="true"
-                  className="mt-2.5 size-1.5 shrink-0 rounded-full"
-                  style={{ background: BRUN }}
-                />
-                {texte}
-              </li>
-            ))}
-          </ul>
+          <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
+            Honnête, ou rien.
+          </h2>
+          <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
+            Un chiffre qui cache sa fiabilité ne sert à rien : le vôtre dira toujours sur
+            combien de jours il porte. Vos données réelles corrigent nos calculs, jamais
+            l’inverse. Et personne d’autre ne verra jamais les vôtres — pas de classement, pas
+            de comparaison. Juste vous, et le temps qui passe.
+          </p>
         </section>
 
         <section className="px-6 pt-4 pb-16 text-center">
