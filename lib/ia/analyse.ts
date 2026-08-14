@@ -17,38 +17,67 @@ export const NOM_OUTIL_ESTIMATION = 'enregistrer_estimation';
 export const SCHEMA_OUTIL_ESTIMATION = {
   name: NOM_OUTIL_ESTIMATION,
   description:
-    "Enregistre l'estimation nutritionnelle d'un aliment ou d'un plat décrit en langage libre.",
+    "Enregistre l'estimation nutritionnelle d'un ou plusieurs aliments décrits en langage libre.",
   input_schema: {
     type: 'object' as const,
     properties: {
-      libelle: {
-        type: 'string',
-        description: 'Nom clair et concis du plat ou de l’aliment, en français.',
+      aliments: {
+        type: 'array',
+        description:
+          "Un élément par aliment ou plat distinct. Un plat composé (« pâtes à la bolognaise », « un sandwich jambon-beurre ») reste un seul élément — ne jamais le décomposer en ingrédients. Mais plusieurs aliments distincts mangés côte à côte sans former un plat unique (« des sardines et des crevettes », « une pomme et un yaourt ») donnent un élément par aliment, chacun avec ses propres valeurs, jamais additionnées ensemble.",
+        items: {
+          type: 'object',
+          properties: {
+            libelle: {
+              type: 'string',
+              description: 'Nom clair et concis de cet aliment ou plat précis, en français.',
+            },
+            quantiteG: {
+              type: 'number',
+              description: 'Quantité estimée en grammes pour cet aliment.',
+            },
+            kcal: {
+              type: 'number',
+              description: 'Calories totales pour cet aliment et cette quantité, pas pour 100 g.',
+            },
+            proteinesG: {
+              type: 'number',
+              description: 'Protéines en grammes, pour cet aliment.',
+            },
+            glucidesG: {
+              type: 'number',
+              description: 'Glucides en grammes, pour cet aliment.',
+            },
+            lipidesG: {
+              type: 'number',
+              description: 'Lipides en grammes, pour cet aliment.',
+            },
+          },
+          required: ['libelle', 'quantiteG', 'kcal', 'proteinesG', 'glucidesG', 'lipidesG'],
+        },
       },
-      quantiteG: {
-        type: 'number',
-        description: 'Quantité estimée en grammes pour la portion décrite.',
-      },
-      kcal: {
-        type: 'number',
-        description: 'Calories totales estimées pour cette quantité précise, pas pour 100 g.',
-      },
-      proteinesG: { type: 'number', description: 'Protéines en grammes, pour cette quantité.' },
-      glucidesG: { type: 'number', description: 'Glucides en grammes, pour cette quantité.' },
-      lipidesG: { type: 'number', description: 'Lipides en grammes, pour cette quantité.' },
     },
-    required: ['libelle', 'quantiteG', 'kcal', 'proteinesG', 'glucidesG', 'lipidesG'],
+    required: ['aliments'],
   },
 };
 
-export const INSTRUCTIONS_ESTIMATION = `Tu estimes les valeurs nutritionnelles d'un repas décrit en français par
-un utilisateur qui suit son alimentation. Réponds uniquement en appelant l'outil fourni.
+export const INSTRUCTIONS_ESTIMATION = `Tu estimes les valeurs nutritionnelles de ce qu'un utilisateur décrit avoir mangé, en
+français. Réponds uniquement en appelant l'outil fourni.
+
+Distingue deux cas :
+- Un plat composé, préparé comme un tout (« pâtes à la bolognaise », « un sandwich
+  jambon-beurre », « une pizza margherita ») : un seul élément dans "aliments", avec le
+  total pour le plat entier. Ne décompose jamais un plat en ses ingrédients.
+- Plusieurs aliments distincts mentionnés ensemble mais mangés séparément (« des sardines
+  et des crevettes », « une pomme et un yaourt ») : un élément par aliment, chacun avec ses
+  propres valeurs. Ne les additionne jamais en un seul total — leurs profils nutritionnels
+  sont différents et l'utilisateur doit pouvoir corriger chacun indépendamment.
 
 Sois réaliste plutôt que prudent : donne la meilleure estimation pour la portion décrite,
-pas une fourchette basse. Si la quantité n'est pas précisée, retiens une portion usuelle en
+pas une fourchette basse. Si une quantité n'est pas précisée, retiens une portion usuelle en
 France pour ce plat. Les nombres portent sur la quantité entière décrite, jamais sur 100 g.`;
 
-const schemaEstimation = z.object({
+const schemaAliment = z.object({
   libelle: z.string().trim().min(1).max(200),
   quantiteG: z.number().positive().max(5000),
   kcal: z.number().min(0).max(20000),
@@ -57,10 +86,14 @@ const schemaEstimation = z.object({
   lipidesG: z.number().min(0).max(2000),
 });
 
-export type EstimationAliment = z.infer<typeof schemaEstimation>;
+const schemaEstimation = z.object({
+  aliments: z.array(schemaAliment).min(1).max(10),
+});
+
+export type EstimationAliment = z.infer<typeof schemaAliment>;
 
 export type ResultatEstimation =
-  | { succes: true; donnees: EstimationAliment }
+  | { succes: true; donnees: readonly EstimationAliment[] }
   | { succes: false; erreur: string };
 
 interface BlocContenu {
@@ -108,5 +141,5 @@ export function analyserReponseEstimation(reponse: unknown): ResultatEstimation 
     };
   }
 
-  return { succes: true, donnees: analyse.data };
+  return { succes: true, donnees: analyse.data.aliments };
 }

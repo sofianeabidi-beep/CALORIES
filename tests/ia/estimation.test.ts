@@ -15,7 +15,7 @@ function reponseAvecOutil(input: unknown) {
   };
 }
 
-const ESTIMATION_VALIDE = {
+const SANDWICH = {
   libelle: 'Sandwich jambon-beurre',
   quantiteG: 180,
   kcal: 420,
@@ -24,11 +24,28 @@ const ESTIMATION_VALIDE = {
   lipidesG: 20,
 };
 
-describe('analyserReponseEstimation', () => {
-  it('accepte une estimation bien formée', () => {
-    const resultat = analyserReponseEstimation(reponseAvecOutil(ESTIMATION_VALIDE));
+const POMME = {
+  libelle: 'Pomme',
+  quantiteG: 150,
+  kcal: 80,
+  proteinesG: 0.5,
+  glucidesG: 20,
+  lipidesG: 0.3,
+};
 
-    expect(resultat).toEqual({ succes: true, donnees: ESTIMATION_VALIDE });
+describe('analyserReponseEstimation', () => {
+  it('accepte un plat composé comme un seul aliment', () => {
+    const resultat = analyserReponseEstimation(reponseAvecOutil({ aliments: [SANDWICH] }));
+
+    expect(resultat).toEqual({ succes: true, donnees: [SANDWICH] });
+  });
+
+  it('accepte plusieurs aliments distincts, chacun avec ses propres valeurs', () => {
+    const resultat = analyserReponseEstimation(
+      reponseAvecOutil({ aliments: [SANDWICH, POMME] }),
+    );
+
+    expect(resultat).toEqual({ succes: true, donnees: [SANDWICH, POMME] });
   });
 
   it('relaie le message d’erreur renvoyé par l’API', () => {
@@ -54,7 +71,7 @@ describe('analyserReponseEstimation', () => {
 
   it('ignore un tool_use portant un autre nom', () => {
     const resultat = analyserReponseEstimation({
-      content: [{ type: 'tool_use', name: 'autre_outil', input: ESTIMATION_VALIDE }],
+      content: [{ type: 'tool_use', name: 'autre_outil', input: { aliments: [SANDWICH] } }],
     });
 
     expect(resultat.succes).toBe(false);
@@ -62,7 +79,7 @@ describe('analyserReponseEstimation', () => {
 
   it('rejette des valeurs hors bornes plutôt que de les propager', () => {
     const resultat = analyserReponseEstimation(
-      reponseAvecOutil({ ...ESTIMATION_VALIDE, kcal: -50 }),
+      reponseAvecOutil({ aliments: [{ ...SANDWICH, kcal: -50 }] }),
     );
 
     expect(resultat.succes).toBe(false);
@@ -70,7 +87,7 @@ describe('analyserReponseEstimation', () => {
 
   it('rejette un libellé vide', () => {
     const resultat = analyserReponseEstimation(
-      reponseAvecOutil({ ...ESTIMATION_VALIDE, libelle: '' }),
+      reponseAvecOutil({ aliments: [{ ...SANDWICH, libelle: '' }] }),
     );
 
     expect(resultat.succes).toBe(false);
@@ -80,15 +97,21 @@ describe('analyserReponseEstimation', () => {
     // Personne ne mange 10 kg en un repas : mieux vaut refuser une
     // estimation absurde que de l'afficher comme si elle était fiable.
     const resultat = analyserReponseEstimation(
-      reponseAvecOutil({ ...ESTIMATION_VALIDE, quantiteG: 10_000 }),
+      reponseAvecOutil({ aliments: [{ ...SANDWICH, quantiteG: 10_000 }] }),
     );
 
     expect(resultat.succes).toBe(false);
   });
 
-  it('rejette un champ manquant', () => {
-    const { kcal: _kcal, ...sansKcal } = ESTIMATION_VALIDE;
-    const resultat = analyserReponseEstimation(reponseAvecOutil(sansKcal));
+  it('rejette un champ manquant dans un aliment', () => {
+    const { kcal: _kcal, ...sansKcal } = SANDWICH;
+    const resultat = analyserReponseEstimation(reponseAvecOutil({ aliments: [sansKcal] }));
+
+    expect(resultat.succes).toBe(false);
+  });
+
+  it('rejette un tableau d’aliments vide', () => {
+    const resultat = analyserReponseEstimation(reponseAvecOutil({ aliments: [] }));
 
     expect(resultat.succes).toBe(false);
   });
