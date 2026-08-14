@@ -14,8 +14,6 @@ const BRUN = '#5c4a30';
 const BRUN_MUET = '#6b6255';
 const TEAL = '#1f6f78';
 
-const SERIF = 'Georgia, "Iowan Old Style", "Times New Roman", serif';
-
 type RouteAuth = '/inscription' | '/connexion';
 
 function BoutonPrincipal({ href, children }: { href: RouteAuth; children: string }) {
@@ -63,18 +61,15 @@ export default function Accueil() {
           </div>
 
           <div className="px-6 pt-8 pb-10">
-            <p className="text-base italic" style={{ fontFamily: SERIF, color: BRUN }}>
+            <p className="font-voice text-base italic" style={{ color: BRUN }}>
               Symbio
             </p>
-            <h1
-              className="mt-4 text-3xl leading-[1.2] font-normal text-balance"
-              style={{ fontFamily: SERIF }}
-            >
+            <h1 className="font-voice mt-4 text-3xl leading-[1.2] text-balance">
               Le poids se joue sur des semaines. On compte comme ça.
             </h1>
             <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
-              Symbio suit votre capital calorique sur la durée — jamais un chiffre isolé qui
-              vous met la pression après un seul repas.
+              Suivez votre capital calorique sur la durée. Jamais un chiffre isolé qui vous
+              met la pression après un seul repas.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -86,18 +81,15 @@ export default function Accueil() {
 
         <section className="px-6 py-14">
           <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
-            La vision
+            Pensez large
           </p>
-          <h2
-            className="mt-3 text-2xl leading-[1.3] font-normal text-balance"
-            style={{ fontFamily: SERIF }}
-          >
+          <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
             Compter les calories sans se faire du mal.
           </h2>
           <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
-            La plupart des applis vous jugent sur votre journée. Symbio regarde la semaine, le
-            mois — le temps qu’il faut vraiment pour perdre du poids. Un excès un soir ne casse
-            rien : il se dilue dans le capital cumulé, pas dans une alerte rouge.
+            La plupart des applis vous jugent sur votre journée. Regardez la semaine, le mois
+            — le temps qu’il faut vraiment pour perdre du poids. Un excès un soir ne casse
+            rien : il se dilue dans le capital cumulé, jamais dans une alerte rouge.
           </p>
         </section>
 
@@ -113,12 +105,9 @@ export default function Accueil() {
           </div>
           <div className="px-6 py-10">
             <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
-              L’utilité
+              Mangez librement
             </p>
-            <h2
-              className="mt-3 text-2xl leading-[1.3] font-normal text-balance"
-              style={{ fontFamily: SERIF }}
-            >
+            <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
               Mangez ce que vous aimez. On s’occupe des chiffres.
             </h2>
             <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
@@ -131,7 +120,7 @@ export default function Accueil() {
 
         <section className="px-6 py-14">
           <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
-            Comment on reste honnête
+            Notre promesse
           </p>
           <ul className="mt-4 flex flex-col gap-4">
             {[
@@ -152,12 +141,12 @@ export default function Accueil() {
         </section>
 
         <section className="px-6 pt-4 pb-16 text-center">
-          <h2
-            className="text-2xl leading-[1.3] font-normal text-balance"
-            style={{ fontFamily: SERIF }}
-          >
-            Prêt à commencer ?
+          <h2 className="font-voice text-2xl leading-[1.3] text-balance">
+            Votre rythme. Vos règles.
           </h2>
+          <p className="mt-3 text-base" style={{ color: BRUN_MUET }}>
+            Prêt à voir votre poids autrement ?
+          </p>
           <div className="mt-6 flex flex-col items-center gap-4">
             <BoutonPrincipal href="/inscription">Créer un compte</BoutonPrincipal>
             <LienDiscret href="/connexion">Se connecter</LienDiscret>
