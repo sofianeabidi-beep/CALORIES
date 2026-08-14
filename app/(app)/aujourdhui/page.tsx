@@ -55,7 +55,7 @@ export default async function Aujourdhui() {
   // installation, on l'y renvoie plutôt que d'afficher des tirets.
   if (vue === null) redirect('/reglages/programme');
 
-  const { bilan, email, entrees, nombrePesees, objectifKcal, profil, programme } = vue;
+  const { bilan, entrees, nombrePesees, objectifKcal, profil, programme } = vue;
   const apportDuJour = entrees.reduce((somme, e) => somme + Number(e.kcal), 0);
   const proteinesDuJour = entrees.reduce((s, e) => s + Number(e.proteines_g ?? 0), 0);
   const glucidesDuJour = entrees.reduce((s, e) => s + Number(e.glucides_g ?? 0), 0);
@@ -98,7 +98,6 @@ export default async function Aujourdhui() {
 
       <EnteteProfil
         prenom={profil.prenom}
-        email={email}
         joursDeRegime={nombreJoursInclus(programme.date_debut, date)}
         nombrePesees={nombrePesees}
         kgTheoriques={bilan.kgTheoriques}

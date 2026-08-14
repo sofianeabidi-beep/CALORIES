@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Bascule, Libelle } from '@/components/ui/primitives';
+import { supprimerEntree } from '@/lib/actions/journal';
 import { LIBELLES_REPAS, OPTIONS_REPAS, repasParDefaut } from '@/lib/repas';
 import type { Repas } from '@/lib/supabase/types';
 
@@ -29,6 +30,11 @@ const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
  * fois, en changeant d'onglet, et l'ajout part directement dans la bonne
  * catégorie — plus besoin de la choisir une seconde fois sur l'écran
  * suivant.
+ *
+ * Modifier/Supprimer par entrée : une erreur de saisie (mauvaise
+ * quantité, mauvais aliment) est fréquente et doit se corriger aussi
+ * vite qu'elle s'est ajoutée, sans repasser par le support ou recréer
+ * l'entrée à la main.
  */
 export function AlimentationJour({
   entrees,
@@ -38,10 +44,17 @@ export function AlimentationJour({
   modeDiscret: boolean;
 }) {
   const [selection, setSelection] = useState<Repas>(repasParDefaut);
+  const [suppressionEnCours, setSuppressionEnCours] = useState<string | null>(null);
 
   const duRepas = entrees.filter((e) => e.repas === selection);
   const total = duRepas.reduce((somme, e) => somme + e.kcal, 0);
   const texteRepas = LIBELLES_REPAS[selection];
+
+  async function supprimer(id: string) {
+    setSuppressionEnCours(id);
+    await supprimerEntree({ id });
+    setSuppressionEnCours(null);
+  }
 
   return (
     <div>
@@ -64,14 +77,34 @@ export function AlimentationJour({
         {duRepas.length === 0 ? (
           <p className="mt-2 text-sm text-ardoise">Rien d’enregistré.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-1">
+          <ul className="mt-2 flex flex-col gap-3">
             {duRepas.map((e) => (
-              <li key={e.id} className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="text-graphite">{e.libelle}</span>
-                <span className="chiffre shrink-0 text-ardoise">
-                  {entier.format(e.quantite)} {e.unite}
-                  {!modeDiscret && ` · ${entier.format(e.kcal)} kcal`}
-                </span>
+              <li key={e.id} className="border-b border-trait pb-3 text-sm last:border-b-0 last:pb-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-graphite">{e.libelle}</span>
+                  <span className="chiffre shrink-0 text-ardoise">
+                    {entier.format(e.quantite)} {e.unite}
+                    {!modeDiscret && ` · ${entier.format(e.kcal)} kcal`}
+                  </span>
+                </div>
+                <div className="mt-1 flex gap-4">
+                  <Link
+                    href={`/saisie?editId=${e.id}`}
+                    className="text-xs text-ardoise underline underline-offset-2"
+                  >
+                    Modifier
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={suppressionEnCours === e.id}
+                    onClick={() => {
+                      void supprimer(e.id);
+                    }}
+                    className="text-xs text-ardoise underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {suppressionEnCours === e.id ? 'Suppression…' : 'Supprimer'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

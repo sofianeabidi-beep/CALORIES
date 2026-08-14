@@ -10,30 +10,26 @@ import { aujourdhuiIso } from '@/lib/dates-app';
 import { OPTIONS_REPAS } from '@/lib/repas';
 import { Alerte, Bouton, Carte, Champ, Selecteur } from '@/components/ui/primitives';
 import { delaiEntree } from '@/components/ui/delai-entree';
+import type { Repas } from '@/lib/supabase/types';
 
 const ETAT_INITIAL: Resultat = { ok: true };
+
+export interface EntreeAModifier {
+  readonly id: string;
+  readonly date: string;
+  readonly libelle: string;
+  readonly repas: Repas;
+  readonly quantite: number;
+  readonly unite: string;
+  readonly kcal: number;
+  readonly proteinesG: number | null;
+  readonly glucidesG: number | null;
+  readonly lipidesG: number | null;
+}
 
 function nombreOuNull(valeur: FormDataEntryValue | null): number | null {
   if (valeur === null || valeur === '') return null;
   return Number(valeur);
-}
-
-async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat> {
-  return enregistrerEntree({
-    // UUID généré par le client : rejouer l'envoi après une coupure
-    // réseau produit un upsert, jamais un doublon (spec §8).
-    id: crypto.randomUUID(),
-    date: donnees.get('date'),
-    libelle: donnees.get('libelle'),
-    repas: donnees.get('repas'),
-    quantite: Number(donnees.get('quantite')),
-    unite: donnees.get('unite'),
-    kcal: Number(donnees.get('kcal')),
-    proteinesG: nombreOuNull(donnees.get('proteinesG')),
-    glucidesG: nombreOuNull(donnees.get('glucidesG')),
-    lipidesG: nombreOuNull(donnees.get('lipidesG')),
-    source: donnees.get('source') || 'rapide',
-  });
 }
 
 interface AlimentEditable {
@@ -61,11 +57,12 @@ function versEditable(a: EstimationAliment): AlimentEditable {
 }
 
 /**
- * Saisie rapide.
+ * Saisie rapide — et correction.
  *
- * Deux chemins vers les mêmes champs : les remplir à la main, ou décrire
+ * Trois chemins vers les mêmes champs : les remplir à la main, décrire
  * ce qui a été mangé en une phrase et laisser une IA proposer des
- * valeurs. Le second ne remplace pas la recherche dans un vrai catalogue
+ * valeurs, ou corriger une entrée déjà enregistrée (`entreeAModifier`).
+ * Le deuxième ne remplace pas la recherche dans un vrai catalogue
  * (CIQUAL, Open Food Facts — phase 2) : quand l'aliment est connu, la
  * base donne un chiffre exact. L'IA n'intervient qu'en dernier recours,
  * et le dit explicitement — jamais présentée comme une valeur sûre.
@@ -75,14 +72,22 @@ function versEditable(a: EstimationAliment): AlimentEditable {
  * l'estimation renvoie alors une liste, affichée comme des cartes
  * séparées et modifiables, enregistrées ensemble plutôt que fondues en
  * un seul total qui masquerait la contribution de chacune.
+ *
+ * En correction, la description libre disparaît : il n'y a rien à
+ * réestimer, seulement des valeurs déjà connues à ajuster.
+ * `enregistrerEntree` fait un upsert sur l'UUID client — soumettre le
+ * même id que l'entrée d'origine la met à jour au lieu d'en créer une
+ * seconde.
  */
-export function FormulaireSaisie() {
-  const [etat, envoyer, enCours] = useActionState(action, ETAT_INITIAL);
+export function FormulaireSaisie({
+  entreeAModifier = null,
+}: {
+  entreeAModifier?: EntreeAModifier | null;
+}) {
   const parametres = useSearchParams();
   const routeur = useRouter();
-  const champs = etat.ok ? undefined : etat.champs;
 
-  const repasDefaut = parametres.get('repas') ?? 'dejeuner';
+  const repasDefaut = entreeAModifier?.repas ?? parametres.get('repas') ?? 'dejeuner';
 
   const [texteLibre, setTexteLibre] = useState('');
   const [enEstimation, setEnEstimation] = useState(false);
@@ -93,13 +98,57 @@ export function FormulaireSaisie() {
   const [enEnregistrement, setEnEnregistrement] = useState(false);
   const [erreurEnregistrement, setErreurEnregistrement] = useState<string | null>(null);
 
-  const [libelle, setLibelle] = useState('');
-  const [quantite, setQuantite] = useState('100');
-  const [unite, setUnite] = useState('g');
-  const [kcal, setKcal] = useState('');
-  const [proteinesG, setProteinesG] = useState('');
-  const [glucidesG, setGlucidesG] = useState('');
-  const [lipidesG, setLipidesG] = useState('');
+  const [libelle, setLibelle] = useState(entreeAModifier?.libelle ?? '');
+  const [quantite, setQuantite] = useState(String(entreeAModifier?.quantite ?? 100));
+  const [unite, setUnite] = useState(entreeAModifier?.unite ?? 'g');
+  const [kcal, setKcal] = useState(entreeAModifier === null ? '' : String(entreeAModifier.kcal));
+  const [proteinesG, setProteinesG] = useState(
+    entreeAModifier?.proteinesG === undefined || entreeAModifier.proteinesG === null
+      ? ''
+      : String(entreeAModifier.proteinesG),
+  );
+  const [glucidesG, setGlucidesG] = useState(
+    entreeAModifier?.glucidesG === undefined || entreeAModifier.glucidesG === null
+      ? ''
+      : String(entreeAModifier.glucidesG),
+  );
+  const [lipidesG, setLipidesG] = useState(
+    entreeAModifier?.lipidesG === undefined || entreeAModifier.lipidesG === null
+      ? ''
+      : String(entreeAModifier.lipidesG),
+  );
+
+  async function action(_precedent: Resultat, donnees: FormData): Promise<Resultat> {
+    const resultat = await enregistrerEntree({
+      // Édition : même id que l'entrée d'origine, l'upsert la met à
+      // jour. Création : UUID généré ici — rejouer l'envoi après une
+      // coupure réseau produit alors un upsert, jamais un doublon
+      // (spec §8).
+      id: entreeAModifier?.id ?? crypto.randomUUID(),
+      date: entreeAModifier?.date ?? donnees.get('date'),
+      libelle: donnees.get('libelle'),
+      repas: donnees.get('repas'),
+      quantite: Number(donnees.get('quantite')),
+      unite: donnees.get('unite'),
+      kcal: Number(donnees.get('kcal')),
+      proteinesG: nombreOuNull(donnees.get('proteinesG')),
+      glucidesG: nombreOuNull(donnees.get('glucidesG')),
+      lipidesG: nombreOuNull(donnees.get('lipidesG')),
+      source: donnees.get('source') || 'rapide',
+    });
+
+    // Corriger une entrée est un geste isolé, contrairement à la saisie
+    // rapide d'affilée : revenir à Aujourd'hui est ici la confirmation
+    // la plus utile, comme pour Programme et Pesée.
+    if (resultat.ok && entreeAModifier !== null) {
+      routeur.push('/aujourdhui');
+    }
+
+    return resultat;
+  }
+
+  const [etat, envoyer, enCours] = useActionState(action, ETAT_INITIAL);
+  const champs = etat.ok ? undefined : etat.champs;
 
   async function lancerEstimation() {
     setEnEstimation(true);
@@ -167,39 +216,41 @@ export function FormulaireSaisie() {
 
   return (
     <>
-      <Carte className="mb-4 entree-douce" style={delaiEntree(0)}>
-        <label htmlFor="texteLibre" className="libelle">
-          Décrire ce que vous avez mangé
-        </label>
-        <div className="mt-1 flex gap-2">
-          <input
-            id="texteLibre"
-            value={texteLibre}
-            onChange={(e) => {
-              setTexteLibre(e.target.value);
+      {entreeAModifier === null && (
+        <Carte className="mb-4 entree-douce" style={delaiEntree(0)}>
+          <label htmlFor="texteLibre" className="libelle">
+            Décrire ce que vous avez mangé
+          </label>
+          <div className="mt-1 flex gap-2">
+            <input
+              id="texteLibre"
+              value={texteLibre}
+              onChange={(e) => {
+                setTexteLibre(e.target.value);
+              }}
+              placeholder="Ex. un sandwich jambon-beurre et une pomme"
+              className="chiffre min-h-11 flex-1 rounded-lg border border-trait bg-surface px-3 py-2 text-base text-graphite"
+            />
+          </div>
+          <Bouton
+            variante="discret"
+            className="mt-2"
+            disabled={enEstimation || texteLibre.trim().length < 3}
+            onClick={() => {
+              void lancerEstimation();
             }}
-            placeholder="Ex. un sandwich jambon-beurre et une pomme"
-            className="chiffre min-h-11 flex-1 rounded-lg border border-trait bg-surface px-3 py-2 text-base text-graphite"
-          />
-        </div>
-        <Bouton
-          variante="discret"
-          className="mt-2"
-          disabled={enEstimation || texteLibre.trim().length < 3}
-          onClick={() => {
-            void lancerEstimation();
-          }}
-        >
-          {enEstimation ? 'Estimation…' : 'Estimer avec l’IA'}
-        </Bouton>
-        {erreurEstimation !== null && (
-          <p className="mt-2 text-sm text-ardoise">{erreurEstimation}</p>
-        )}
-        <p className="mt-2 text-sm text-ardoise">
-          Pour un aliment simple ou une marque connue, mieux vaut la recherche du catalogue
-          quand elle sera disponible — plus précise qu’une estimation.
-        </p>
-      </Carte>
+          >
+            {enEstimation ? 'Estimation…' : 'Estimer avec l’IA'}
+          </Bouton>
+          {erreurEstimation !== null && (
+            <p className="mt-2 text-sm text-ardoise">{erreurEstimation}</p>
+          )}
+          <p className="mt-2 text-sm text-ardoise">
+            Pour un aliment simple ou une marque connue, mieux vaut la recherche du catalogue
+            quand elle sera disponible — plus précise qu’une estimation.
+          </p>
+        </Carte>
+      )}
 
       {aliments !== null ? (
         <div className="flex flex-col gap-4">
@@ -345,8 +396,10 @@ export function FormulaireSaisie() {
         </div>
       ) : (
         <Carte className="entree-douce" style={delaiEntree(1)}>
-          <form action={envoyer} className="flex flex-col gap-4">
-            <input type="hidden" name="date" value={aujourdhuiIso()} />
+          <form action={envoyer} className="flex flex-col gap-4" aria-busy={enCours}>
+            {entreeAModifier === null && (
+              <input type="hidden" name="date" value={aujourdhuiIso()} />
+            )}
             <input type="hidden" name="source" value="rapide" readOnly />
 
             <Champ
@@ -452,7 +505,11 @@ export function FormulaireSaisie() {
             {!etat.ok && <Alerte>{etat.erreur}</Alerte>}
 
             <Bouton type="submit" disabled={enCours}>
-              {enCours ? 'Enregistrement…' : 'Enregistrer'}
+              {enCours
+                ? 'Enregistrement…'
+                : entreeAModifier === null
+                  ? 'Enregistrer'
+                  : 'Enregistrer les modifications'}
             </Bouton>
 
             <Bouton

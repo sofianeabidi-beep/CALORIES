@@ -7,10 +7,8 @@ const deuxDecimales = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 2,
 });
 
-function nomAffiche(prenom: string | null, email: string | null): string {
-  if (prenom !== null && prenom.length > 0) return prenom;
-  if (email !== null && email.length > 0) return email.split('@')[0] ?? email;
-  return 'Vous';
+function nomAffiche(prenom: string | null): string {
+  return prenom !== null && prenom.length > 0 ? prenom : 'Vous';
 }
 
 /**
@@ -22,7 +20,6 @@ function nomAffiche(prenom: string | null, email: string | null): string {
  */
 export function EnteteProfil({
   prenom,
-  email,
   joursDeRegime,
   nombrePesees,
   kgTheoriques,
@@ -32,7 +29,6 @@ export function EnteteProfil({
   style,
 }: {
   prenom: string | null;
-  email: string | null;
   joursDeRegime: number;
   nombrePesees: number;
   /** Positif quand le poids a théoriquement baissé — voir `Bilan.kgTheoriques`. */
@@ -48,7 +44,7 @@ export function EnteteProfil({
   className?: string | undefined;
   style?: CSSProperties | undefined;
 }) {
-  const nom = nomAffiche(prenom, email);
+  const nom = nomAffiche(prenom);
   const initiale = nom.charAt(0).toUpperCase();
   const enDeficit = kgTheoriques >= 0;
 
@@ -88,11 +84,12 @@ export function EnteteProfil({
 
       {joursAvantObjectif !== null && joursAvantObjectif > 0 && (
         <p className="mt-3 border-t border-trait pt-3 text-sm text-ardoise">
-          Encore environ{' '}
+          Il vous reste environ{' '}
           <span className="chiffre font-medium text-graphite">
             {entier.format(joursAvantObjectif)}
           </span>{' '}
-          {joursAvantObjectif > 1 ? 'jours' : 'jour'} avant votre objectif, au rythme actuel.
+          {joursAvantObjectif > 1 ? 'jours' : 'jour'} d’effort à ce rythme pour atteindre votre
+          objectif.
         </p>
       )}
     </Carte>
