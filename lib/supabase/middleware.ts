@@ -3,8 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { configPublique } from './env';
 import type { Database } from './types';
 
-/** Routes accessibles sans session. */
-const PUBLIQUES = ['/connexion', '/inscription', '/auth'];
+/**
+ * Routes accessibles sans session.
+ *
+ * `/` en exact seulement : la vérification plus bas ajoute un `/` avant
+ * `startsWith`, donc `/` comme préfixe donnerait `//`, que plus aucune
+ * route ne commence — sans quoi tout chemin (qui commence forcément par
+ * `/`) deviendrait public par accident.
+ */
+const PUBLIQUES = ['/', '/connexion', '/inscription', '/auth'];
 
 /**
  * Rafraîchit la session à chaque requête et garde les routes privées.
