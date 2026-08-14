@@ -1,9 +1,14 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { lireJournee } from '@/lib/donnees/journee';
+import { lireHistoriquePoids } from '@/lib/donnees/pesee';
 import { aujourdhuiIso, formaterDate } from '@/lib/dates-app';
 import { IndicateurCumule } from '@/components/bilan/indicateur-cumule';
+import { GraphiquePoids } from '@/components/bilan/graphique-poids';
+import { AnalysePeriode } from '@/components/bilan/analyse-periode';
 import { Carte, Chiffre, Libelle } from '@/components/ui/primitives';
-import { calculerImc, KCAL_PAR_KG } from '@/lib/calcul';
+import { delaiEntree } from '@/components/ui/delai-entree';
+import { calculerImc, tendancePoids, KCAL_PAR_KG } from '@/lib/calcul';
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const uneDecimale = new Intl.NumberFormat('fr-FR', {
@@ -14,6 +19,9 @@ const deuxDecimales = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+/** Fenêtre du rythme « 3 derniers mois » — distincte des 28 j utilisés pour la projection. */
+const FENETRE_RYTHME_LONG_JOURS = 90;
 
 /**
  * Catégories usuelles de l'OMS. Affichage informatif, pas un verdict :
@@ -27,16 +35,26 @@ function categorieImc(imc: number): string {
   return 'Obésité';
 }
 
+function formaterRythme(kgParSemaine: number): string {
+  const signe = kgParSemaine >= 0 ? '+' : '';
+  if (Math.abs(kgParSemaine) < 1) {
+    return `${signe}${entier.format(kgParSemaine * 1000)} g/semaine`;
+  }
+  return `${signe}${deuxDecimales.format(kgParSemaine)} kg/semaine`;
+}
+
 /**
- * Les quatre indicateurs (spec §1).
+ * Les quatre indicateurs (spec §1), plus le suivi du poids — Pesée et
+ * Bilan ne font plus qu'un seul onglet : le poids est l'une des données
+ * du bilan, pas un sujet à part.
  *
- * Le troisième — la confrontation entre kilos théoriques et kilos
- * mesurés — est le produit. L'écart n'est pas une erreur à masquer :
- * c'est ce qui permet de corriger la dépense énergétique.
+ * Le troisième indicateur — la confrontation entre kilos théoriques et
+ * kilos mesurés — est le produit. L'écart n'est pas une erreur à
+ * masquer : c'est ce qui permet de corriger la dépense énergétique.
  */
 export default async function Bilan() {
   const date = aujourdhuiIso();
-  const vue = await lireJournee(date);
+  const [vue, historique] = await Promise.all([lireJournee(date), lireHistoriquePoids()]);
   if (vue === null) redirect('/reglages/programme');
 
   const { bilan } = vue;
@@ -51,6 +69,14 @@ export default async function Bilan() {
       : Number(vue.programme.poids_depart_kg) - bilan.kgReels;
   const tailleCm = vue.profil.taille_cm;
 
+  const pesees = historique?.pesees ?? [];
+  const journees = historique?.journees ?? [];
+  const tendanceLongue = tendancePoids({
+    pesees,
+    dateFin: date,
+    joursFenetre: FENETRE_RYTHME_LONG_JOURS,
+  });
+
   return (
     <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-6">
       <header>
@@ -63,14 +89,17 @@ export default async function Bilan() {
       <IndicateurCumule
         libelle={enDeficit ? 'Déficit cumulé' : 'Surplus cumulé'}
         valeur={entier.format(Math.abs(bilan.deficitCumulKcal))}
+        valeurAnimee={Math.abs(bilan.deficitCumulKcal)}
         unite="kcal"
         ton={enDeficit ? 'deficit' : 'surplus'}
         completude={bilan.completude}
         precision={`Soit ${deuxDecimales.format(Math.abs(bilan.kgTheoriques))} kg en théorie, au coefficient approximatif de ${entier.format(KCAL_PAR_KG)} kcal par kilo. Une part des variations à court terme relève de l’eau et du glycogène, pas de la masse grasse.`}
+        className="halo-deficit entree-douce"
+        style={delaiEntree(0)}
       />
 
       {bilan.kgReels === null ? (
-        <Carte>
+        <Carte className="entree-douce" style={delaiEntree(1)}>
           <Libelle>Théorique contre réel</Libelle>
           <p className="mt-2 text-sm text-ardoise">
             Enregistrez au moins une pesée pour confronter la théorie à la réalité. C’est
@@ -78,7 +107,7 @@ export default async function Bilan() {
           </p>
         </Carte>
       ) : (
-        <Carte>
+        <Carte className="entree-douce" style={delaiEntree(1)}>
           <Libelle>Théorique contre réel</Libelle>
           <div className="mt-3 flex items-baseline justify-between gap-4">
             <div>
@@ -109,7 +138,7 @@ export default async function Bilan() {
         </Carte>
       )}
 
-      <Carte>
+      <Carte className="entree-douce" style={delaiEntree(2)}>
         <Libelle>Dépense énergétique</Libelle>
         <div className="mt-2">
           <Chiffre
@@ -129,7 +158,7 @@ export default async function Bilan() {
         </p>
       </Carte>
 
-      <Carte>
+      <Carte className="entree-douce" style={delaiEntree(3)}>
         <Libelle>Rythme actuel</Libelle>
         {bilan.allureKgSemaine === null ? (
           <p className="mt-2 text-sm text-ardoise">
@@ -145,6 +174,7 @@ export default async function Bilan() {
                 ton={bilan.allureKgSemaine <= 0 ? 'deficit' : 'surplus'}
               />
             </div>
+            <p className="mt-1 text-xs text-ardoise">Sur les 28 derniers jours.</p>
             {bilan.projection.affichable ? (
               <p className="mt-2 text-sm text-ardoise">
                 Objectif atteint entre le{' '}
@@ -165,10 +195,29 @@ export default async function Bilan() {
             )}
           </>
         )}
+
+        {tendanceLongue !== null && (
+          <p className="mt-3 border-t border-trait pt-2 text-sm text-ardoise">
+            Sur les 3 derniers mois :{' '}
+            <span className="chiffre text-graphite">
+              {formaterRythme(tendanceLongue.kgParSemaine)}
+            </span>{' '}
+            en moyenne.
+          </p>
+        )}
       </Carte>
 
+      <Carte className="entree-douce" style={delaiEntree(4)}>
+        <Libelle>Évolution du poids</Libelle>
+        <div className="mt-3">
+          <GraphiquePoids pesees={pesees} />
+        </div>
+      </Carte>
+
+      <AnalysePeriode journees={journees} pesees={pesees} />
+
       {tailleCm !== null && (
-        <Carte>
+        <Carte className="entree-douce" style={delaiEntree(5)}>
           <Libelle>Poids et taille</Libelle>
           <div className="mt-3 flex items-baseline justify-between gap-4">
             <div>
@@ -198,6 +247,59 @@ export default async function Bilan() {
           </p>
         </Carte>
       )}
+
+      <Carte className="entree-douce" style={delaiEntree(6)}>
+        <Libelle>Dernières pesées</Libelle>
+        {pesees.length === 0 ? (
+          <p className="mt-2 text-sm text-ardoise">Aucune pesée enregistrée.</p>
+        ) : (
+          <ul className="mt-2 flex flex-col gap-2">
+            {pesees
+              .slice(-10)
+              .reverse()
+              .map((pesee) => (
+                <li key={pesee.date} className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-ardoise">
+                    {formaterDate(pesee.date, { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className="flex items-baseline gap-3">
+                    <span
+                      className={`chiffre text-sm ${
+                        pesee.aberrante ? 'text-signal' : 'text-graphite'
+                      }`}
+                    >
+                      {uneDecimale.format(pesee.poidsKg)} kg
+                    </span>
+                    <span className="chiffre w-20 text-right text-sm text-ardoise">
+                      {pesee.moyenneMobile7jKg === null
+                        ? '—'
+                        : `moy. ${uneDecimale.format(pesee.moyenneMobile7jKg)}`}
+                    </span>
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
+
+        {pesees.slice(-10).some((p) => p.aberrante) && (
+          <p className="mt-3 border-t border-trait pt-2 text-sm text-ardoise">
+            Les valeurs en rouge s’écartent de plus de 2 kg de votre moyenne. Elles sont
+            conservées mais exclues du calcul, le temps que vous les confirmiez.
+          </p>
+        )}
+
+        {/* Un bouton normal, pas flottant : contrairement à « Ajouter un
+            repas » (plusieurs fois par jour), se peser arrive au plus une
+            fois par jour, et Bilan est une page qu'on lit plutôt qu'un
+            écran d'action rapide — un bouton fixe finissait par recouvrir
+            en permanence une partie de la carte au-dessus. */}
+        <Link
+          href="/pesee/nouvelle"
+          className="mt-4 flex min-h-12 items-center justify-center rounded-xl bg-deficit px-4 text-base font-medium text-white transition duration-150 hover:opacity-90 active:opacity-80"
+        >
+          Je me pèse
+        </Link>
+      </Carte>
     </main>
   );
 }

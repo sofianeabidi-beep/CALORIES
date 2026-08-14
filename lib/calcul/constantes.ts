@@ -107,3 +107,62 @@ export const ALLURE_MAX_FRACTION_POIDS = 0.01;
 
 /** Âge minimum à l'inscription (spec §9). */
 export const AGE_MINIMUM = 18;
+
+/**
+ * Fenêtre de jours considérée pour la tendance récente affichée sur
+ * l'écran Aujourd'hui. Décision produit, hors spec d'origine.
+ */
+export const FENETRE_TENDANCE_JOURS = 7;
+
+/**
+ * En deçà de ce nombre de jours renseignés dans la fenêtre, aucune
+ * tendance n'est affichée — même principe qu'ailleurs : pas assez de
+ * données renseignées, pas de message plutôt qu'un message inventé.
+ */
+export const SEUIL_JOURS_MIN_TENDANCE = 4;
+
+/**
+ * Écart de déficit journalier au-delà duquel un jour est considéré comme
+ * notable (ex. « hier c'était plus gras ») plutôt que du bruit habituel.
+ */
+export const SEUIL_ECART_NOTABLE_KCAL = 300;
+
+/**
+ * À partir de cette fraction de l'objectif calorique, la journée est
+ * jugée « proche de l'objectif » plutôt que strictement en dessous.
+ * Décision produit, hors spec d'origine.
+ */
+export const SEUIL_PROCHE_OBJECTIF_KCAL = 0.9;
+
+/**
+ * Repère de protéines quotidien, en grammes par kilo de poids. Valeur
+ * courante dans la littérature grand public pour la perte de poids —
+ * **un repère, pas une prescription médicale**, à dire clairement dans
+ * l'interface. Basé sur le poids de départ du programme, faute de mieux :
+ * une variation de poids depuis ne le rend pas faux, juste approximatif.
+ */
+export const RATIO_PROTEINES_G_PAR_KG = 1.6;
+
+/**
+ * En dessous de cette fraction du repère de protéines, l'apport du jour
+ * est jugé insuffisant. Une marge existe volontairement : ne pas signaler
+ * un écart de quelques grammes comme un manque.
+ */
+export const SEUIL_PROTEINES_SUFFISANT = 0.8;
+
+/**
+ * Équivalences caloriques des macronutriments (facteurs d'Atwater).
+ * Ce sont des constantes nutritionnelles standards, pas des décisions
+ * produit — contrairement au ratio de répartition ci-dessous.
+ */
+export const KCAL_PAR_G_PROTEINES = 4;
+export const KCAL_PAR_G_GLUCIDES = 4;
+export const KCAL_PAR_G_LIPIDES = 9;
+
+/**
+ * Part de l'objectif calorique allouée aux lipides pour dériver un
+ * objectif en grammes, une fois les protéines couvertes par leur propre
+ * repère. Le glucide prend le reste. **Décision produit arbitraire**,
+ * pas une recommandation nutritionnelle validée — à ajuster si besoin.
+ */
+export const RATIO_LIPIDES_KCAL_OBJECTIF = 0.3;

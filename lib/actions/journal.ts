@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { schemaEntree, schemaPesee, schemaSuppressionEntree } from '@/lib/validations';
 import { creerClientServeur } from '@/lib/supabase/server';
 import { aujourdhuiIso } from '@/lib/dates-app';
@@ -205,10 +206,11 @@ export async function enregistrerPesee(donnees: unknown): Promise<Resultat> {
   await recalculerDepuis({ dateImpactee: saisie.date, aujourdhui: aujourdhuiIso() });
   revalidatePath('/aujourdhui');
   revalidatePath('/bilan');
-  // Sans ça, la liste « Dernières pesées » ne se rafraîchissait pas :
-  // la seule preuve visible qu'un enregistrement a marché sur cette
-  // page, puisque `etat.ok` vaut déjà `true` avant tout envoi.
-  revalidatePath('/pesee');
 
-  return { ok: true };
+  // La saisie vit sur sa propre page (/pesee/nouvelle) : rediriger vers
+  // le tableau de bord est la confirmation elle-même, même raisonnement
+  // que pour le programme — `etat.ok` vaut déjà `true` avant tout envoi,
+  // rien ne distingue sinon « pas encore soumis » de « vient de réussir ».
+  // Pesée et Bilan ne font plus qu'un seul onglet.
+  redirect('/bilan');
 }

@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react';
 import type { Completude } from '@/lib/calcul';
 import { Carte, Chiffre, Libelle } from '@/components/ui/primitives';
+import { CompteurAnime } from '@/components/ui/compteur-anime';
 
 /**
  * Indicateur cumulé, **toujours accompagné de sa complétude**.
@@ -14,17 +16,27 @@ import { Carte, Chiffre, Libelle } from '@/components/ui/primitives';
 export function IndicateurCumule({
   libelle,
   valeur,
+  valeurAnimee,
   unite,
   ton = 'neutre',
   completude,
   precision,
+  className,
+  style,
 }: {
   libelle: string;
   valeur: string;
-  unite?: string;
+  // Fournie en plus de `valeur` (déjà formatée, utilisée telle quelle si
+  // l'animation est coupée avant même le premier rendu) : la version
+  // brute nécessaire pour compter jusqu'à la valeur plutôt que l'afficher
+  // figée.
+  valeurAnimee?: number | undefined;
+  unite?: string | undefined;
   ton?: 'neutre' | 'deficit' | 'surplus';
   completude: Completude;
   precision?: string;
+  className?: string | undefined;
+  style?: CSSProperties | undefined;
 }) {
   const pourcent = Math.round(completude.taux * 100);
 
@@ -33,10 +45,14 @@ export function IndicateurCumule({
   const fragile = completude.taux < 0.6;
 
   return (
-    <Carte>
+    <Carte className={className} style={style}>
       <Libelle>{libelle}</Libelle>
       <div className="mt-2">
-        <Chiffre valeur={valeur} unite={unite} ton={ton} />
+        {valeurAnimee === undefined ? (
+          <Chiffre valeur={valeur} unite={unite} ton={ton} />
+        ) : (
+          <CompteurAnime valeurs={[valeurAnimee]} unite={unite} ton={ton} />
+        )}
       </div>
 
       {precision !== undefined && (

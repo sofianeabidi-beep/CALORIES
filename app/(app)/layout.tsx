@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 
 const ONGLETS = [
   { href: '/aujourdhui', texte: 'Aujourd’hui' },
-  { href: '/pesee', texte: 'Pesée' },
   { href: '/bilan', texte: 'Bilan' },
   { href: '/reglages', texte: 'Réglages' },
 ] as const;

@@ -30,7 +30,7 @@ export function FormulairePesee({
 
   return (
     <Carte>
-      <form action={envoyer} className="flex flex-col gap-4">
+      <form action={envoyer} className="flex flex-col gap-4" aria-busy={enCours}>
         <Champ
           nom="date"
           libelle="Date"

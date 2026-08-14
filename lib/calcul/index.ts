@@ -25,3 +25,6 @@ export * from './completude';
 export * from './projection';
 export * from './gardefous';
 export * from './bilan';
+export * from './tendance';
+export * from './statutJour';
+export * from './macros';
