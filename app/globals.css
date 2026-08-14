@@ -121,3 +121,54 @@ input[type='submit'] {
   outline: 2px solid var(--couleur-deficit);
   outline-offset: 2px;
 }
+
+/* Sans ça, les cases à cocher natives s'affichent dans le bleu par
+   défaut du navigateur, hors palette. */
+input[type='checkbox'] {
+  accent-color: var(--couleur-deficit);
+}
+
+/*
+ * Entrée en cascade légère des cartes au chargement — la règle
+ * `prefers-reduced-motion` ci-dessus neutralise déjà tout ceci pour qui
+ * la demande, sans rien de spécifique à ajouter ici.
+ */
+@keyframes entree-douce {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entree-douce {
+  animation: entree-douce 400ms ease-out both;
+  animation-delay: var(--delai-entree, 0ms);
+}
+
+/*
+ * Halo doux derrière la carte focale d'un écran (ex. « Restant
+ * aujourd'hui ») — un point d'ancrage visuel, pas un fond plein : la
+ * teinte reste celle du déficit, jamais une couleur inventée pour
+ * l'occasion.
+ */
+.halo-deficit {
+  position: relative;
+  overflow: hidden;
+}
+
+.halo-deficit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 15% -10%, var(--couleur-deficit), transparent 55%);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.halo-deficit > * {
+  position: relative;
+}

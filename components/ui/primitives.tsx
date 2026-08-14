@@ -1,4 +1,6 @@
-import type { ChangeEventHandler, ReactNode } from 'react';
+'use client';
+
+import type { ChangeEventHandler, CSSProperties, ReactNode } from 'react';
 
 /**
  * Primitives d'interface.
@@ -10,13 +12,18 @@ import type { ChangeEventHandler, ReactNode } from 'react';
 export function Carte({
   children,
   className = '',
+  style,
 }: {
   children: ReactNode;
-  className?: string;
+  className?: string | undefined;
+  // Sert notamment à passer une variable CSS (ex. `--delai-entree`) sans
+  // créer une classe utilitaire par valeur possible.
+  style?: CSSProperties | undefined;
 }) {
   return (
     <section
       className={`rounded-xl border border-trait bg-surface p-4 ${className}`.trim()}
+      style={style}
     >
       {children}
     </section>
@@ -83,8 +90,8 @@ export function Bouton({
 }) {
   const styles =
     variante === 'principal'
-      ? 'bg-deficit text-white'
-      : 'border border-trait bg-surface text-graphite';
+      ? 'bg-deficit text-white hover:opacity-90 active:opacity-80'
+      : 'border border-trait bg-surface text-graphite hover:border-ardoise active:bg-trait';
 
   return (
     <button
@@ -92,10 +99,55 @@ export function Bouton({
       disabled={disabled}
       onClick={onClick}
       // 44 px de haut au minimum : cible tactile utilisable d'une main.
-      className={`min-h-11 w-full rounded-lg px-4 py-3 text-base font-medium disabled:opacity-50 ${styles} ${className}`.trim()}
+      // `transition` (pas juste `-colors`) : le retour à la souris couvre
+      // aussi bien la bordure que l'opacité selon la variante.
+      className={`min-h-11 w-full rounded-lg px-4 py-3 text-base font-medium transition duration-150 disabled:pointer-events-none disabled:opacity-50 ${styles} ${className}`.trim()}
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Bascule en pilules : un choix parmi quelques options, affiché comme des
+ * boutons côte à côte plutôt qu'un menu déroulant — pour un choix qu'on
+ * fait souvent et qu'on veut voir d'un coup d'œil (repas visé, contrainte
+ * de temps, période). `pleineLargeur` répartit les options à parts
+ * égales ; sans lui, les pilules gardent leur largeur naturelle et
+ * défilent horizontalement si elles débordent.
+ */
+export function Bascule({
+  options,
+  valeur,
+  onChange,
+  pleineLargeur = false,
+}: {
+  options: readonly { valeur: string; texte: string }[];
+  valeur: string;
+  onChange: (valeur: string) => void;
+  pleineLargeur?: boolean;
+}) {
+  return (
+    <div className={`flex gap-2 ${pleineLargeur ? '' : 'overflow-x-auto'}`}>
+      {options.map((option) => (
+        <button
+          key={option.valeur}
+          type="button"
+          onClick={() => {
+            onChange(option.valeur);
+          }}
+          className={`${
+            pleineLargeur ? 'flex-1' : 'shrink-0'
+          } rounded-lg border px-3 py-2 text-sm transition duration-150 ${
+            option.valeur === valeur
+              ? 'border-deficit text-deficit'
+              : 'border-trait text-ardoise hover:border-ardoise'
+          }`}
+        >
+          {option.texte}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -169,12 +221,19 @@ export function Selecteur({
   libelle,
   options,
   defaultValue,
+  value,
+  onChange,
   erreurs,
 }: {
   nom: string;
   libelle: string;
   options: readonly { valeur: string; texte: string }[];
   defaultValue?: string;
+  // Même règle que `Champ` : mode contrôlé pour un sélecteur partagé hors
+  // d'un `<form>` natif (ex. le repas commun à plusieurs aliments issus
+  // d'une estimation IA). Ne jamais fournir en même temps que `defaultValue`.
+  value?: string;
+  onChange?: (valeur: string) => void;
   erreurs?: string[] | undefined;
 }) {
   const idErreur = `${nom}-erreur`;
@@ -189,6 +248,8 @@ export function Selecteur({
         id={nom}
         name={nom}
         defaultValue={defaultValue}
+        value={value}
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         aria-invalid={enErreur}
         aria-describedby={enErreur ? idErreur : undefined}
         className={`min-h-11 rounded-lg border bg-surface px-3 py-2 text-base text-graphite ${

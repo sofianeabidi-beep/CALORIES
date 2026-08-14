@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Caloryes',
+  title: 'Symbio',
   // Aucune allégation médicale, ici comme ailleurs (section 9).
   description: 'Suivi calorique cumulé : où j’en suis vraiment, et est-ce que ça marche.',
-  applicationName: 'Caloryes',
-  appleWebApp: { capable: true, title: 'Caloryes', statusBarStyle: 'default' },
+  applicationName: 'Symbio',
+  appleWebApp: { capable: true, title: 'Symbio', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
