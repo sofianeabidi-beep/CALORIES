@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { enregistrerEntree } from '@/lib/actions/journal';
 import type { Resultat } from '@/lib/actions/journal';
 import { estimerRepasDecrit } from '@/lib/actions/estimation';
+import { BoutonDictee } from '@/components/saisie/bouton-dictee';
 import type { EstimationAliment } from '@/lib/ia/analyse';
 import { aujourdhuiIso } from '@/lib/dates-app';
 import { OPTIONS_REPAS } from '@/lib/repas';
@@ -231,6 +232,7 @@ export function FormulaireSaisie({
               placeholder="Ex. un sandwich jambon-beurre et une pomme"
               className="chiffre min-h-11 flex-1 rounded-lg border border-trait bg-surface px-3 py-2 text-base text-graphite"
             />
+            <BoutonDictee onTranscription={setTexteLibre} />
           </div>
           <Bouton
             variante="discret"
