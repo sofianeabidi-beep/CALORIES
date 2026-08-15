@@ -10,8 +10,14 @@ import type { Database } from './types';
  * `startsWith`, donc `/` comme préfixe donnerait `//`, que plus aucune
  * route ne commence — sans quoi tout chemin (qui commence forcément par
  * `/`) deviendrait public par accident.
+ *
+ * `/api/cron` : les tâches planifiées (Vercel Cron) appellent ces routes
+ * sans cookie de session — elles portent leur propre secret
+ * (`CRON_SECRET`, vérifié dans chaque route). Sans cette exception, la
+ * redirection vers `/connexion` s'appliquerait avant même que la route
+ * ne reçoive la requête, et le cron ne se déclencherait jamais.
  */
-const PUBLIQUES = ['/', '/connexion', '/inscription', '/auth'];
+const PUBLIQUES = ['/', '/connexion', '/inscription', '/auth', '/api/cron'];
 
 /**
  * Rafraîchit la session à chaque requête et garde les routes privées.
