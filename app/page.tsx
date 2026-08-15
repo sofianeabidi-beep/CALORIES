@@ -73,7 +73,7 @@ export default function Accueil() {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-4">
-              <BoutonPrincipal href="/inscription">Créer un compte</BoutonPrincipal>
+              <BoutonPrincipal href="/inscription">Créer un compte gratuit</BoutonPrincipal>
               <LienDiscret href="/connexion">J’ai déjà un compte</LienDiscret>
             </div>
           </div>
@@ -121,6 +121,50 @@ export default function Accueil() {
 
         <section className="px-6 py-14">
           <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
+            L’IA qui parle votre langue
+          </p>
+          <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
+            Décrivez, vérifiez, c’est enregistré.
+          </h2>
+          <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
+            Vous décrivez ce que vous avez mangé en une phrase. L’IA propose les calories et les
+            macronutriments, y compris pour plusieurs aliments à la fois. Vous gardez toujours
+            la main pour corriger un chiffre avant d’enregistrer — une estimation reste une
+            estimation, jamais présentée comme une valeur mesurée.
+          </p>
+        </section>
+
+        <section className="px-6 py-14" style={{ background: '#e8e0cf' }}>
+          <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
+            Chaque lundi, un résumé
+          </p>
+          <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
+            Suivez sans ouvrir l’appli tous les jours.
+          </h2>
+          <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
+            Un mail chaque lundi avec le bilan de votre semaine — poids, complétude, tendance —
+            et sa fiabilité toujours affichée à côté. De quoi rester au courant sans la tyrannie
+            du quotidien, exactement l’esprit de Symbio.
+          </p>
+        </section>
+
+        <section className="px-6 py-14">
+          <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
+            Mains libres
+          </p>
+          <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
+            Dictez votre repas, sans toucher l’écran.
+          </h2>
+          <p className="mt-4 text-base" style={{ color: BRUN_MUET }}>
+            À table ou en cuisinant, un bouton micro sur l’écran de saisie transcrit ce que vous
+            dites — la même estimation par IA prend ensuite le relais. Disponible sur les
+            navigateurs qui supportent la reconnaissance vocale (Chrome, Edge) ; la saisie
+            manuelle reste toujours là en repli.
+          </p>
+        </section>
+
+        <section className="px-6 py-14">
+          <p className="text-sm font-semibold tracking-[0.15em] uppercase" style={{ color: BRUN }}>
             Ce qui ne changera jamais
           </p>
           <h2 className="font-voice mt-3 text-2xl leading-[1.3] text-balance">
@@ -141,9 +185,12 @@ export default function Accueil() {
           <p className="mt-3 text-base" style={{ color: BRUN_MUET }}>
             Prêt à voir votre poids autrement ?
           </p>
-          <div className="mt-6 flex flex-col items-center gap-4">
-            <BoutonPrincipal href="/inscription">Créer un compte</BoutonPrincipal>
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <BoutonPrincipal href="/inscription">Créer un compte gratuit</BoutonPrincipal>
             <LienDiscret href="/connexion">Se connecter</LienDiscret>
+            <p className="mt-1 text-sm" style={{ color: BRUN_MUET }}>
+              Pas de carte bancaire requise.
+            </p>
           </div>
         </section>
       </div>
