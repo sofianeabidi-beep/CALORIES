@@ -145,7 +145,61 @@ export async function enregistrerPrenom(donnees: unknown): Promise<Resultat> {
   if (error !== null) return { ok: false, erreur: error.message };
 
   revalidatePath('/reglages');
-  revalidatePath('/aujourdhui');
+  return { ok: true };
+}
+
+const TYPES_PHOTO_AUTORISES = ['image/jpeg', 'image/png', 'image/webp'];
+const TAILLE_PHOTO_MAX_OCTETS = 5 * 1024 * 1024;
+
+/**
+ * Photo de profil, optionnelle. Un seul objet par utilisateur dans le
+ * bucket `avatars` (`{user_id}/avatar`, sans extension) : `upsert: true`
+ * remplace l'ancienne quel que soit son format, pas de fichier orphelin
+ * si le format change d'un envoi à l'autre.
+ */
+export async function mettreAJourPhotoProfil(donnees: FormData): Promise<Resultat> {
+  const fichier = donnees.get('photo');
+  if (!(fichier instanceof File) || fichier.size === 0) {
+    return { ok: false, erreur: 'Aucun fichier reçu.' };
+  }
+  if (!TYPES_PHOTO_AUTORISES.includes(fichier.type)) {
+    return { ok: false, erreur: 'Format non pris en charge (JPEG, PNG ou WebP).' };
+  }
+  if (fichier.size > TAILLE_PHOTO_MAX_OCTETS) {
+    return { ok: false, erreur: 'Image trop lourde (5 Mo maximum).' };
+  }
+
+  const supabase = await creerClientServeur();
+  // `getSession()`, pas seulement `getUser()` : c'est cet appel qui
+  // établit le jeton utilisé par les sous-clients `storage`/`rest` de
+  // supabase-js. Un `getUser()` seul laisse le client Storage
+  // s'initialiser paresseusement avec les en-têtes d'origine (anon
+  // seul), et la RLS du bucket refuse alors l'insertion — constaté en
+  // comparant les journaux Postgres/Storage : la policy et le chemin
+  // étaient corrects, `auth.uid()` valait `null` côté service Storage.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session === null) return { ok: false, erreur: 'Session expirée.' };
+  const user = session.user;
+
+  const chemin = `${user.id}/avatar`;
+  const { error: erreurUpload } = await supabase.storage
+    .from('avatars')
+    .upload(chemin, fichier, { upsert: true, contentType: fichier.type });
+  if (erreurUpload !== null) return { ok: false, erreur: erreurUpload.message };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('avatars').getPublicUrl(chemin);
+  // Un même chemin remplacé en place garderait sinon l'ancienne image en
+  // cache navigateur — le paramètre change à chaque envoi pour l'invalider.
+  const url = `${publicUrl}?v=${Date.now()}`;
+
+  const { error } = await supabase.from('profil').update({ photo_url: url }).eq('user_id', user.id);
+  if (error !== null) return { ok: false, erreur: error.message };
+
+  revalidatePath('/reglages');
   return { ok: true };
 }
 

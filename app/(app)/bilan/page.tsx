@@ -87,13 +87,14 @@ export default async function Bilan() {
       </header>
 
       <IndicateurCumule
-        libelle={enDeficit ? 'Déficit cumulé' : 'Surplus cumulé'}
-        valeur={entier.format(Math.abs(bilan.deficitCumulKcal))}
-        valeurAnimee={Math.abs(bilan.deficitCumulKcal)}
-        unite="kcal"
+        libelle={enDeficit ? 'Perte de poids cumulée' : 'Prise de poids cumulée'}
+        valeur={deuxDecimales.format(Math.abs(bilan.kgTheoriques))}
+        valeurAnimee={Math.abs(bilan.kgTheoriques)}
+        unite="kg"
+        decimales={2}
         ton={enDeficit ? 'deficit' : 'surplus'}
         completude={bilan.completude}
-        precision={`Soit ${deuxDecimales.format(Math.abs(bilan.kgTheoriques))} kg en théorie, au coefficient approximatif de ${entier.format(KCAL_PAR_KG)} kcal par kilo. Une part des variations à court terme relève de l’eau et du glycogène, pas de la masse grasse.`}
+        precision={`Soit ${entier.format(Math.abs(bilan.deficitCumulKcal))} kcal de ${enDeficit ? 'déficit' : 'surplus'} cumulé, au coefficient approximatif de ${entier.format(KCAL_PAR_KG)} kcal par kilo. Une part des variations à court terme relève de l’eau et du glycogène, pas de la masse grasse.`}
         className="halo-deficit entree-douce"
         style={delaiEntree(0)}
       />
@@ -139,26 +140,6 @@ export default async function Bilan() {
       )}
 
       <Carte className="entree-douce" style={delaiEntree(2)}>
-        <Libelle>Dépense énergétique</Libelle>
-        <div className="mt-2">
-          <Chiffre
-            valeur={entier.format(Math.round(bilan.depenseRetenueKcal))}
-            unite="kcal/j"
-            taille="moyen"
-          />
-        </div>
-        <p className="mt-2 text-sm text-ardoise">
-          {bilan.depenseIssueDuReel
-            ? 'Recalculée sur vos données réelles. Elle a remplacé l’estimation par formule.'
-            : 'Estimée par la formule de Mifflin-St Jeor. C’est un point de départ, pas une vérité — elle sera corrigée dès que vos données le permettront.'}
-        </p>
-        <p className="mt-2 text-sm text-ardoise">
-          Fiabilité : <span className="chiffre">{Math.round(bilan.fiabilite * 100)} %</span>{' '}
-          des jours de la fenêtre de 28 jours sont renseignés.
-        </p>
-      </Carte>
-
-      <Carte className="entree-douce" style={delaiEntree(3)}>
         <Libelle>Rythme actuel</Libelle>
         {bilan.allureKgSemaine === null ? (
           <p className="mt-2 text-sm text-ardoise">
@@ -207,7 +188,7 @@ export default async function Bilan() {
         )}
       </Carte>
 
-      <Carte className="entree-douce" style={delaiEntree(4)}>
+      <Carte className="entree-douce" style={delaiEntree(3)}>
         <Libelle>Évolution du poids</Libelle>
         <div className="mt-3">
           <GraphiquePoids pesees={pesees} />
@@ -217,7 +198,7 @@ export default async function Bilan() {
       <AnalysePeriode journees={journees} pesees={pesees} />
 
       {tailleCm !== null && (
-        <Carte className="entree-douce" style={delaiEntree(5)}>
+        <Carte className="entree-douce" style={delaiEntree(4)}>
           <Libelle>Poids et taille</Libelle>
           <div className="mt-3 flex items-baseline justify-between gap-4">
             <div>
@@ -248,7 +229,7 @@ export default async function Bilan() {
         </Carte>
       )}
 
-      <Carte className="entree-douce" style={delaiEntree(6)}>
+      <Carte className="entree-douce" style={delaiEntree(5)}>
         <Libelle>Historique</Libelle>
         <p className="mt-2 text-sm text-ardoise">
           Déficit ou surplus jour par jour, avec le détail de ce que vous avez mangé.
@@ -258,7 +239,7 @@ export default async function Bilan() {
         </Link>
       </Carte>
 
-      <Carte className="entree-douce" style={delaiEntree(7)}>
+      <Carte className="entree-douce" style={delaiEntree(6)}>
         <Libelle>Dernières pesées</Libelle>
         {pesees.length === 0 ? (
           <p className="mt-2 text-sm text-ardoise">Aucune pesée enregistrée.</p>

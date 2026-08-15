@@ -2,9 +2,7 @@ import { redirect } from 'next/navigation';
 import { lireJournee } from '@/lib/donnees/journee';
 import { aujourdhuiIso, formaterDate } from '@/lib/dates-app';
 import {
-  differenceJours,
   evaluerStatutJour,
-  nombreJoursInclus,
   objectifProteinesRepere,
   repartirMacrosObjectif,
 } from '@/lib/calcul';
@@ -13,7 +11,6 @@ import { delaiEntree } from '@/components/ui/delai-entree';
 import { CompteurAnime } from '@/components/ui/compteur-anime';
 import { AlimentationJour } from '@/components/aujourdhui/alimentation-jour';
 import { BlocSuggestion } from '@/components/aujourdhui/bloc-suggestion';
-import { EnteteProfil } from '@/components/aujourdhui/entete-profil';
 import type { StatutKcal } from '@/lib/calcul';
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -55,7 +52,7 @@ export default async function Aujourdhui() {
   // installation, on l'y renvoie plutôt que d'afficher des tirets.
   if (vue === null) redirect('/reglages/programme');
 
-  const { bilan, entrees, nombrePesees, objectifKcal, profil, programme } = vue;
+  const { bilan, entrees, objectifKcal, profil, programme } = vue;
   const apportDuJour = entrees.reduce((somme, e) => somme + Number(e.kcal), 0);
   const proteinesDuJour = entrees.reduce((s, e) => s + Number(e.proteines_g ?? 0), 0);
   const glucidesDuJour = entrees.reduce((s, e) => s + Number(e.glucides_g ?? 0), 0);
@@ -82,32 +79,13 @@ export default async function Aujourdhui() {
     kcal: Number(e.kcal),
   }));
 
-  // `null` sans exception : la projection se masque déjà elle-même
-  // quand les données ne la portent pas (§ Projection) — pas de date à
-  // soustraire dans ce cas.
-  const joursAvantObjectif =
-    bilan.projection.affichable && bilan.projection.dateMediane !== null
-      ? differenceJours(date, bilan.projection.dateMediane)
-      : null;
-
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <header className="mb-4">
         <Libelle>{formaterDate(date)}</Libelle>
       </header>
 
-      <EnteteProfil
-        prenom={profil.prenom}
-        joursDeRegime={nombreJoursInclus(programme.date_debut, date)}
-        nombrePesees={nombrePesees}
-        kgTheoriques={bilan.kgTheoriques}
-        joursAvantObjectif={joursAvantObjectif}
-        modeDiscret={profil.mode_discret}
-        className="entree-douce"
-        style={delaiEntree(0)}
-      />
-
-      <Carte className="mt-4 halo-deficit entree-douce" style={delaiEntree(1)}>
+      <Carte className="halo-deficit entree-douce" style={delaiEntree(0)}>
         <Libelle>Restant aujourd’hui</Libelle>
         <div className="mt-2">
           {/* Mode discret : ni calories, ni objectif. Seules la
@@ -153,7 +131,7 @@ export default async function Aujourdhui() {
       </Carte>
 
       {!profil.mode_discret && (
-        <Carte className="mt-4 entree-douce" style={delaiEntree(2)}>
+        <Carte className="mt-4 entree-douce" style={delaiEntree(1)}>
           <Libelle>Macronutriments</Libelle>
           <div className="mt-2 grid grid-cols-3 gap-3">
             <div>
@@ -185,7 +163,7 @@ export default async function Aujourdhui() {
       )}
 
       {!profil.mode_discret && (
-        <Carte className="mt-4 entree-douce" style={delaiEntree(3)}>
+        <Carte className="mt-4 entree-douce" style={delaiEntree(2)}>
           <Libelle>Avis sur la journée</Libelle>
           <div className="mt-2 flex flex-col gap-1">
             <p className="text-sm text-ardoise">{messageStatutKcal}</p>
@@ -196,7 +174,7 @@ export default async function Aujourdhui() {
         </Carte>
       )}
 
-      <Carte className="mt-4 entree-douce" style={delaiEntree(4)}>
+      <Carte className="mt-4 entree-douce" style={delaiEntree(3)}>
         <Libelle>Alimentation du jour</Libelle>
         <AlimentationJour
           entrees={entrees.map((e) => ({
@@ -216,7 +194,7 @@ export default async function Aujourdhui() {
           restantKcal={restant}
           repasDejaPris={repasDejaPris}
           className="mt-4 entree-douce"
-          style={delaiEntree(5)}
+          style={delaiEntree(4)}
         />
       )}
     </main>

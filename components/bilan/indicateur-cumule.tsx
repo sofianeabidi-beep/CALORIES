@@ -19,6 +19,7 @@ export function IndicateurCumule({
   valeurAnimee,
   unite,
   ton = 'neutre',
+  decimales = 0,
   completude,
   precision,
   className,
@@ -33,6 +34,8 @@ export function IndicateurCumule({
   valeurAnimee?: number | undefined;
   unite?: string | undefined;
   ton?: 'neutre' | 'deficit' | 'surplus';
+  /** Décimales de la version animée — voir `CompteurAnime`. */
+  decimales?: number;
   completude: Completude;
   precision?: string;
   className?: string | undefined;
@@ -51,7 +54,7 @@ export function IndicateurCumule({
         {valeurAnimee === undefined ? (
           <Chiffre valeur={valeur} unite={unite} ton={ton} />
         ) : (
-          <CompteurAnime valeurs={[valeurAnimee]} unite={unite} ton={ton} />
+          <CompteurAnime valeurs={[valeurAnimee]} unite={unite} ton={ton} decimales={decimales} />
         )}
       </div>
 

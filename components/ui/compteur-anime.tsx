@@ -18,6 +18,13 @@ const COULEURS = {
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
+function formatteurDecimales(decimales: number): Intl.NumberFormat {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales,
+  });
+}
+
 /**
  * Chiffre(s) qui comptent jusqu'à leur valeur au lieu de s'afficher figés.
  *
@@ -44,11 +51,14 @@ export function CompteurAnime({
   separateur = '/',
   unite,
   ton = 'neutre',
+  decimales = 0,
 }: {
   valeurs: readonly number[];
   separateur?: string;
   unite?: string | undefined;
   ton?: 'neutre' | 'deficit' | 'surplus' | 'signal';
+  /** Nombre de décimales affichées — 0 par défaut (kcal). Un poids en kg passe 2. */
+  decimales?: number;
 }) {
   const [affichees, setAffichees] = useState<readonly number[]>(() => valeurs.map(() => 0));
   const depart = useRef<readonly number[]>(valeurs.map(() => 0));
@@ -84,7 +94,8 @@ export function CompteurAnime({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cle` résume `valeurs` par contenu, pas par référence.
   }, [cle]);
 
-  const texte = affichees.map((v) => entier.format(Math.round(v))).join(separateur);
+  const formatteur = decimales === 0 ? entier : formatteurDecimales(decimales);
+  const texte = affichees.map((v) => formatteur.format(v)).join(separateur);
 
   return (
     <p className={`chiffre ${COULEURS[ton]} text-5xl leading-none font-light`}>

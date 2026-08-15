@@ -58,6 +58,8 @@ export type LigneProfil = {
   // NULL tant que non renseigné depuis Réglages — jamais recueilli à
   // l'inscription. L'affichage se replie sur l'email.
   prenom: string | null;
+  // URL publique dans le bucket `avatars`. NULL tant que non renseignée.
+  photo_url: string | null;
   sexe: Sexe;
   date_naissance: string;
   // Recueillie à la création du programme, plus à l'inscription : la

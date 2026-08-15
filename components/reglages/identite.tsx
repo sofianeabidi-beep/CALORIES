@@ -1,7 +1,12 @@
 import type { CSSProperties } from 'react';
 import { Carte, Libelle } from '@/components/ui/primitives';
+import { PhotoProfil } from '@/components/reglages/photo-profil';
 
 const entier = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const uneDecimale = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 const deuxDecimales = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -12,33 +17,32 @@ function nomAffiche(prenom: string | null): string {
 }
 
 /**
- * Bloc d'identité en tête d'Aujourd'hui — inspiré du profil Strava dans
- * sa forme (avatar, nom, trois chiffres), pas dans son fond : pas
- * d'abonnés ni d'abonnements, ce serait un graphe social que
- * l'application ne construit pas (décision du 2026-08-14). Les trois
- * chiffres restent personnels : aucun ne se compare à qui que ce soit.
+ * Bloc d'identité, en tête de la section Profil (Réglages) — anciennement
+ * en tête d'Aujourd'hui, déplacé ici pour rejoindre les objectifs et la
+ * dépense énergétique plutôt que de rester isolé sur l'écran du jour.
+ *
+ * Le nombre de pesées a disparu au passage : peu parlant une fois sorti
+ * du contexte du graphique de Bilan. Le poids actuel prend sa place,
+ * cohérent avec le cadrage en perte/prise de poids plutôt qu'en kcal
+ * (voir Bilan).
  */
-export function EnteteProfil({
+export function Identite({
   prenom,
+  photoUrl,
   joursDeRegime,
-  nombrePesees,
   kgTheoriques,
+  poidsActuelKg,
   joursAvantObjectif,
   modeDiscret,
   className,
   style,
 }: {
   prenom: string | null;
+  photoUrl: string | null;
   joursDeRegime: number;
-  nombrePesees: number;
   /** Positif quand le poids a théoriquement baissé — voir `Bilan.kgTheoriques`. */
   kgTheoriques: number;
-  /**
-   * `null` quand la projection n'est pas affichable (§ Projection) : moins
-   * de 21 jours de données, rythme quasi nul, à l'opposé de l'objectif,
-   * ou échéance à plus de deux ans. Mieux vaut ne rien dire qu'une
-   * échéance fausse — la ligne disparaît plutôt que d'afficher un tiret.
-   */
+  poidsActuelKg: number;
   joursAvantObjectif: number | null;
   modeDiscret: boolean;
   className?: string | undefined;
@@ -51,13 +55,25 @@ export function EnteteProfil({
   return (
     <Carte className={className} style={style}>
       <div className="flex items-center gap-3">
-        <div
-          aria-hidden="true"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-deficit/10 text-lg font-medium text-deficit"
-        >
-          {initiale}
+        {photoUrl !== null ? (
+          // eslint-disable-next-line @next/next/no-img-element -- domaine Supabase non listé dans next/image, une simple balise suffit pour un avatar.
+          <img
+            src={photoUrl}
+            alt=""
+            className="size-11 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-deficit/10 text-lg font-medium text-deficit"
+          >
+            {initiale}
+          </div>
+        )}
+        <div>
+          <p className="text-lg text-graphite">{nom}</p>
+          <PhotoProfil />
         </div>
-        <p className="text-lg text-graphite">{nom}</p>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-3 border-t border-trait pt-4">
@@ -69,16 +85,17 @@ export function EnteteProfil({
         </div>
         <div>
           <p className="chiffre text-xl font-light text-graphite">
-            {entier.format(nombrePesees)}
-          </p>
-          <Libelle>{nombrePesees > 1 ? 'Pesées' : 'Pesée'}</Libelle>
-        </div>
-        <div>
-          <p className="chiffre text-xl font-light text-graphite">
             {modeDiscret ? '—' : deuxDecimales.format(Math.abs(kgTheoriques))}
             {!modeDiscret && <span className="ml-1 text-sm font-normal text-ardoise">kg</span>}
           </p>
-          <Libelle>{enDeficit ? 'Déficit cumulé' : 'Surplus cumulé'}</Libelle>
+          <Libelle>{enDeficit ? 'Perte de poids cumulée' : 'Prise de poids cumulée'}</Libelle>
+        </div>
+        <div>
+          <p className="chiffre text-xl font-light text-graphite">
+            {modeDiscret ? '—' : uneDecimale.format(poidsActuelKg)}
+            {!modeDiscret && <span className="ml-1 text-sm font-normal text-ardoise">kg</span>}
+          </p>
+          <Libelle>Poids actuel</Libelle>
         </div>
       </div>
 
